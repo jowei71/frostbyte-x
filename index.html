@@ -2,162 +2,150 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>FrostByte X • Instant Scanner</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>FrostByte X</title>
   <meta name="theme-color" content="#000000">
-  
-  <!-- Make it installable as a real app -->
-  <link rel="manifest" href="data:application/manifest+json,{
-    \"name\":\"FrostByte X\",
-    \"short_name\":\"FrostByte\",
-    \"start_url\":\".\",
-    \"display\":\"standalone\",
-    \"background_color\":\"#000\",
-    \"theme_color\":\"#000\",
-    \"icons\":[{\"src\":\"https://frostbytex.netlify.app/icon.png\",\"sizes\":\"512x512\",\"type\":\"image/png\"}]
-  }">
-  
+  <link rel="manifest" href="data:application/manifest+json,{\"name\":\"FrostByte X\",\"short_name\":\"FrostByte\",\"start_url\":\".\",\"display\":\"standalone\",\"background_color\":\"#000\",\"theme_color\":\"#000\"}">
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
-  
-  <!-- Tiny 80KB OCR engine – loads only when you scan -->
-  <script src="https://unpkg.com/tesseract.js@v5.1.0/dist/tesseract.min.js"></script>
-  
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.0/dist/tesseract.min.js"></script>
   <style>
-    body {font-family: system-ui;background:#000;color:#0f0;margin:0;overflow:hidden;}
-    .glitch {color:#0f0;text-shadow:0 0 20px #0f0;animation:g 3s infinite;}
-    @keyframes g{0%,100%{transform:translate(0)}2%{transform:translate(-3px,3px)}4%{transform:translate(3px,-3px)}}
-    .beam {position:absolute;top:0;left:0;right:0;height:6px;background:#0f0;box-shadow:0 0 50px #0f0;animation:b 2.5s infinite linear;}
+    body,html{margin:0;padding:0;height:100vh;background:#000;color:#0f0;font-family:system-ui;overflow:hidden;}
+    .beam{position:fixed;top:0;left:0;right:0;height:6px;background:#0f0;box-shadow:0 0 50px #0f0;animation:b 2.5s infinite linear;z-index:50;}
     @keyframes b{0%{top:-10%}100%{top:110%}}
-    .cap {width:88px;height:88px;border:6px solid #0f0;border-radius:50%;position:absolute;bottom:32px;left:50%;transform:translateX(-50%);background:#000;box-shadow:0 0 50px #0f0;cursor:pointer;}
-    .cap::after{content:'';position:absolute;inset:8px;background:#0f0;border-radius:50%;animation:p 1.5s infinite;}
-    @keyframes p{0%{transform:scale(0.8);opacity:1}100%{transform:scale(2);opacity:0}}
-    .mode{padding:12px 24px;border:2px solid #0f0;border-radius:50px;background:#000;font-weight:900;transition:all .3s;}
-    .mode.active{background:#0f0;color:#000;}
+    .mode-btn{padding:10px 20px;border:2px solid #0f0;border-radius:50px;background:#000;font-weight:900;font-size:14px;transition:all .3s;}
+    .mode-btn.active{background:#0f0;color:#000;}
+    #video{width:100vw;height:100vh;object-fit:cover;}
+    #overlay{position:fixed;inset:0;pointer-events:none;border:4px solid transparent;transition:all .3s;}
+    .detected{border-color:#0f0 !important;box-shadow:0 0 40px #0f0;}
+    #result{position:fixed;inset:0;background:rgba(0,0,0,0.95);padding:20px;overflow-y:auto;z-index:100;}
   </style>
 </head>
-<body class="text-center">
+<body>
 
-  <h1 class="text-6xl font-black glitch mt-12 mb-2">FROSTBYTE <span class="text-green-400">X</span></h1>
-  <p class="text-xl text-green-400 mb-8">Instant • Offline • Reality Scanner</p>
-
-  <div class="flex flex-wrap justify-center gap-4 mb-10 max-w-2xl mx-auto">
-    <button class="mode active" data-mode="Expiry">Food</button>
-    <button class="mode" data-mode="Medicine">Medicine</button>
-    <button class="mode" data-mode="Passport/ID">ID/Passport</button>
-    <button class="mode" data-mode="Crypto Seed">Crypto Seed</button>
-    <button class="mode" data-mode="Ticket">Ticket</button>
-    <button class="mode" data-mode="Receipt">Receipt</button>
-    <button class="mode" data-mode="Love Letter">Love Letter</button>
-    <button class="mode" data-mode="Mystery">Anything</button>
+  <!-- Top bar -->
+  <div class="fixed top-0 left-0 right-0 z-40 p-4 flex justify-between items-center bg-black/80 backdrop-blur">
+    <h1 class="text-2xl font-black">FrostByte <span class="text-green-400">X</span></h1>
+    <button id="close-result" class="text-3xl">×</button>
   </div>
 
-  <div class="relative rounded-3xl overflow-hidden shadow-2xl max-w-lg mx-auto bg-black">
-    <!-- Start -->
-    <div id="init" class="p-16">
-      <button id="start" class="w-full py-12 bg-green-500 text-black text-4xl font-black rounded-2xl shadow-2xl">
-        SCAN NOW
-      </button>
-    </div>
-
-    <!-- Camera -->
-    <div id="camera" class="hidden relative">
-      <video id="video" autoplay playsinline class="w-full"></video>
-      <div class="beam"></div>
-      <button id="capture" class="cap"></button>
-    </div>
-
-    <!-- Processing -->
-    <div id="processing" class="hidden flex flex-col items-center justify-center h-96 bg-black/90">
-      <i class="fa-solid fa-microchip animate-spin text-6xl mb-6"></i>
-      <p class="text-2xl font-bold">DECODING...</p>
-    </div>
+  <!-- Mode selector -->
+  <div class="fixed bottom-24 left-0 right-0 z-40 flex justify-center gap-3 flex-wrap px-4">
+    <button class="mode-btn active" data-mode="Expiry">Food</button>
+    <button class="mode-btn" data-mode="Medicine">Medicine</button>
+    <button class="mode-btn" data-mode="Crypto Seed">Crypto</button>
+    <button class="mode-btn" data-mode="Love Letter">Love</button>
+    <button class="mode-btn" data-mode="Mystery">Any</button>
   </div>
 
-  <!-- Result -->
-  <div id="result" class="hidden mt-8 border-4 border-green-500 rounded-3xl p-8 max-w-lg mx-auto bg-black/90">
-    <h2 id="title" class="text-5xl font-black text-green-400 mb-6"></h2>
-    <img id="photo" class="w-full rounded-2xl border-4 border-green-400 mb-6">
-    <div id="data" class="text-2xl font-mono text-green-300 break-all"></div>
-    <button id="share" class="mt-8 w-full py-5 bg-green-500 text-black rounded-xl font-black text-xl">SHARE RESULT</button>
+  <!-- Camera -->
+  <video id="video" autoplay playsinline></video>
+  <div class="beam"></div>
+  <div id="overlay"></div>
+
+  <!-- Result screen (hidden by default) -->
+  <div id="result" class="hidden flex flex-col">
+    <div class="flex-1 flex flex-col items-center justify-center text-center px-6">
+      <h2 id="title" class="text-5xl font-black text-green-400 mb-6"></h2>
+      <img id="photo" class="max-w-full rounded-2xl border-4 border-green-400 mb-6">
+      <div id="data" class="text-xl font-mono text-green-300 break-all bg-black/50 p-6 rounded-2xl"></div>
+      <button id="share" class="mt-8 px-12 py-5 bg-green-500 text-black rounded-xl font-black text-xl">SHARE</button>
+    </div>
   </div>
 
   <script>
-    let currentMode = "Expiry";
+    let stream, currentMode = "Expiry";
+    const video = document.getElementById('video');
+    const overlay = document.getElementById('overlay');
 
-    // Mode switching
-    document.querySelectorAll('[data-mode]').forEach(b => {
+    // Start camera instantly
+    navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}}).then(s=>{
+      stream = s;
+      video.srcObject = stream;
+    });
+
+    // Mode switch
+    document.querySelectorAll('[data-mode]').forEach(b=>{
       b.onclick = () => {
-        document.querySelectorAll('.mode').forEach(x => x.classList.remove('active'));
+        document.querySelectorAll('.mode-btn').forEach(x=>x.classList.remove('active'));
         b.classList.add('active');
         currentMode = b.dataset.mode;
       };
     });
 
-    // Start camera
-    document.getElementById('start').onclick = async () => {
-      document.getElementById('init').classList.add('hidden');
-      document.getElementById('camera').classList.remove('hidden');
-      const stream = await navigator.mediaDevices.getUserMedia({video: {facingMode: 'environment'}});
-      document.getElementById('video').srcObject = stream;
-    };
-
-    // Capture & scan
-    document.getElementById('capture').onclick = async () => {
-      const video = document.getElementById('video');
+    // Auto-capture when text is detected
+    let lastScan = 0;
+    async function scanLoop() {
+      if (!video.videoWidth) return requestAnimationFrame(scanLoop);
+      
       const canvas = document.createElement('canvas');
-      canvas.width = 800;
-      canvas.height = video.videoHeight * (800 / video.videoWidth);
-      canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
-      const imgData = canvas.toDataURL('image/jpeg', 0.8);
-      video.srcObject.getTracks().forEach(t => t.stop());
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(video, 0, 0);
 
-      document.getElementById('camera').classList.add('hidden');
-      document.getElementById('processing').classList.remove('hidden');
+      // Only scan every 800ms to save battery
+      if (Date.now() - lastScan > 800) {
+        lastScan = Date.now();
+        try {
+          const result = await Tesseract.recognize(canvas, 'eng', {logger: m => {}});
+          const text = result.data.text.toUpperCase();
+          
+          if (text.length > 20) { // something readable
+            overlay.classList.add('detected');
+            setTimeout(() => autoCapture(canvas, text), 600); // slight delay for stability
+          } else {
+            overlay.classList.remove('detected');
+          }
+        } catch(e) {}
+      }
+      requestAnimationFrame(scanLoop);
+    }
+    scanLoop();
 
-      // OCR – starts instantly, finishes in 0.4–1.2s
-      const { data: { text } } = await Tesseract.recognize(canvas, 'eng', {
-        logger: m => console.log(m)
-      });
-
-      const result = extract(text.toUpperCase());
-      showResult(result, imgData);
-    };
+    function autoCapture(canvas, text) {
+      if (document.getElementById('result').classList.contains('hidden')) {
+        const img = canvas.toDataURL('image/jpeg', 0.9);
+        const extracted = extract(text);
+        showResult(extracted, img);
+        stream.getTracks().forEach(t=>t.stop());
+      }
+    }
 
     function extract(text) {
       const patterns = {
-        Expiry: /(EXP|BEST BEFORE|USE BY|BBE)[\s\S]*?(\d{1,2}[-\/\.]\d{1,2}[-\/\.]\d{2,4}|\d{1,2}\s[A-Z]{3}\s\d{4})/i,
-        Medicine: /(EXP|USE BY)[\s\S]*?(\d{4}-\d{2}-\d{2})/i,
-        "Passport/ID": /(DOB|DATE OF BIRTH|BIRTH)[\s\S]*?(\d{1,2}[-\/\.]\d{1,2}[-\/\.]\d{4})/i,
-        "Crypto Seed": /\b([a-z]{3,10}\s+){11,23}[a-z]{3,10}\b/i,
-        Ticket: /(GATE|SEAT|ROW)[\s\S]*?([A-Z]?\d+[A-Z]?)/i,
-        Receipt: /TOTAL[\s\S]*?([£$€¥₦₹]\s*\d+[.,]\d{2})/i,
-        "Love Letter": /(LOVE|DARLING|BABY|FOREVER|MISS YOU)[\s\S]*?(\d{1,2}\s[A-Z]{3,9}\s\d{4})/i,
+        Expiry: /(EXP|BEST BEFORE|USE BY|BBE).{0,50}?\d{1,2}[-\/\.]\d{1,2}[-\/\.]\d{2,4}/,
+        Medicine: /(EXP|USE BY).{0,50}?\d{4}-\d{2}-\d{2}/,
+        "Crypto Seed": /\b([A-Z]{3,10}\s+){11,23}[A-Z]{3,10}\b/,
+        "Love Letter": /(LOVE|DARLING|BABY|FOREVER).{0,100}?\d{4}/,
       };
-
-      const match = text.match(patterns[currentMode] || /.*/);
-      if (currentMode === "Crypto Seed" && match) return {type:"CRYPTO SEED DETECTED", data:match[0], warning:"NEVER SHARE THIS!"};
-      if (currentMode === "Love Letter" && match) return {type:"LOVE LETTER FOUND", data:"Someone loves you so much", romantic:true};
-      return {type: match ? currentMode.toUpperCase() + " DETECTED" : "MYSTERY", data: match ? match[0] : text.slice(0,300)};
+      const match = text.match(patterns[currentMode] || /.+/);
+      if (currentMode === "Crypto Seed" && match) return {type:"CRYPTO SEED DETECTED", data:match[0], warning:"NEVER SHARE!"};
+      if (currentMode === "Love Letter" && match) return {type:"LOVE LETTER", data:"Someone loves you", romantic:true};
+      return {type: match ? currentMode.toUpperCase() : "FOUND", data: match ? match[0] : text.slice(0,300)};
     }
 
     function showResult(info, img) {
-      document.getElementById('processing').classList.add('hidden');
       document.getElementById('result').classList.remove('hidden');
       document.getElementById('title').textContent = info.type;
       document.getElementById('photo').src = img;
       document.getElementById('data').innerHTML = `
-        <div class="text-3xl font-bold mb-4">${info.data}</div>
-        ${info.warning ? `<div class="text-red-500 animate-pulse text-2xl mt-4">Warning: ${info.warning}</div>` : ''}
-        ${info.romantic ? `<div class="text-pink-400 text-7xl mt-6">Love Love Love Love Love</div>` : ''}
+        <div class="text-3xl mb-4">${info.data}</div>
+        ${info.warning ? `<div class="text-red-500 animate-pulse text-2xl">Warning: ${info.warning}</div>` : ''}
+        ${info.romantic ? `<div class="text-pink-400 text-8xl mt-8">Love Love Love</div>` : ''}
       `;
-      confetti({particleCount:300, spread:180, origin:{y:0.5}});
+      confetti({particleCount:400, spread:200, origin:{y:0.6}});
     }
 
-    document.getElementById('share').onclick = () => {
-      if (navigator.share) navigator.share({title:"FrostByte X Scan", url:location.href});
-      else alert("Link copied! Share it anywhere.");
+    document.getElementById('close-result').onclick = () => {
+      document.getElementById('result').classList.add('hidden');
+      navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}}).then(s=>{
+        stream = s;
+        video.srcObject = stream;
+      });
     };
+
+    document.getElementById('share').onclick = () => navigator.share?.({title:"FrostByte X", url:location.href});
   </script>
 </body>
 </html>
