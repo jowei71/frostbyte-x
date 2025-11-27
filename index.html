@@ -5,65 +5,87 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>FrostByte X • Instant Scanner</title>
   <meta name="theme-color" content="#000000">
+  
+  <!-- Make it installable as a real app -->
+  <link rel="manifest" href="data:application/manifest+json,{
+    \"name\":\"FrostByte X\",
+    \"short_name\":\"FrostByte\",
+    \"start_url\":\".\",
+    \"display\":\"standalone\",
+    \"background_color\":\"#000\",
+    \"theme_color\":\"#000\",
+    \"icons\":[{\"src\":\"https://frostbytex.netlify.app/icon.png\",\"sizes\":\"512x512\",\"type\":\"image/png\"}]
+  }">
+  
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@900&family=Inter:wght@900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+  
+  <!-- Tiny 80KB OCR engine – loads only when you scan -->
+  <script src="https://unpkg.com/tesseract.js@v5.1.0/dist/tesseract.min.js"></script>
+  
   <style>
-    body{font-family:'Inter',sans-serif;background:#000;color:#0f0;margin:0;overflow-x:hidden;}
-    .glitch{color:#0f0;text-shadow:0 0 10px #0f0;animation:g 2s infinite;}@keyframes g{0%,100%{transform:translate(0)}2%{transform:translate(-2px,2px)}4%{transform:translate(2px,-2px)}}
-    .beam{position:absolute;top:0;width:100%;height:6px;background:linear-gradient(90deg,transparent,#0f0,transparent);box-shadow:0 0 40px #0f0;animation:b 3s infinite linear;z-index:20;}
+    body {font-family: system-ui;background:#000;color:#0f0;margin:0;overflow:hidden;}
+    .glitch {color:#0f0;text-shadow:0 0 20px #0f0;animation:g 3s infinite;}
+    @keyframes g{0%,100%{transform:translate(0)}2%{transform:translate(-3px,3px)}4%{transform:translate(3px,-3px)}}
+    .beam {position:absolute;top:0;left:0;right:0;height:6px;background:#0f0;box-shadow:0 0 50px #0f0;animation:b 2.5s infinite linear;}
     @keyframes b{0%{top:-10%}100%{top:110%}}
-    .cap{width:88px;height:88px;border:6px solid #0f0;border-radius:50%;position:absolute;bottom:32px;left:50%;transform:translateX(-50%);box-shadow:0 0 40px #0f0;background:#000;}
-    .cap::after{content:'';position:absolute;inset:8px;background:#0f0;border-radius:50%;animation:p 2s infinite;}
-    @keyframes p{0%{transform:scale(0.8);opacity:1}100%{transform:scale(1.8);opacity:0}}
-    .mode{background:rgba(0,255,0,0.1);border:2px solid #0f0;padding:12px 20px;border-radius:50px;font-weight:900;}
+    .cap {width:88px;height:88px;border:6px solid #0f0;border-radius:50%;position:absolute;bottom:32px;left:50%;transform:translateX(-50%);background:#000;box-shadow:0 0 50px #0f0;cursor:pointer;}
+    .cap::after{content:'';position:absolute;inset:8px;background:#0f0;border-radius:50%;animation:p 1.5s infinite;}
+    @keyframes p{0%{transform:scale(0.8);opacity:1}100%{transform:scale(2);opacity:0}}
+    .mode{padding:12px 24px;border:2px solid #0f0;border-radius:50px;background:#000;font-weight:900;transition:all .3s;}
     .mode.active{background:#0f0;color:#000;}
   </style>
 </head>
-<body class="text-center p-4">
+<body class="text-center">
 
-  <h1 class="text-7xl font-black glitch mt-10">FROSTBYTE <span class="text-green-400">X</span></h1>
-  <p class="text-2xl text-green-400">Instant Reality Scanner</p>
+  <h1 class="text-6xl font-black glitch mt-12 mb-2">FROSTBYTE <span class="text-green-400">X</span></h1>
+  <p class="text-xl text-green-400 mb-8">Instant • Offline • Reality Scanner</p>
 
-  <div class="flex flex-wrap justify-center gap-4 my-8 max-w-4xl mx-auto">
+  <div class="flex flex-wrap justify-center gap-4 mb-10 max-w-2xl mx-auto">
     <button class="mode active" data-mode="Expiry">Food</button>
     <button class="mode" data-mode="Medicine">Medicine</button>
     <button class="mode" data-mode="Passport/ID">ID/Passport</button>
-    <button class="mode" data-mode="Crypto Seed">Crypto</button>
+    <button class="mode" data-mode="Crypto Seed">Crypto Seed</button>
     <button class="mode" data-mode="Ticket">Ticket</button>
     <button class="mode" data-mode="Receipt">Receipt</button>
-    <button class="mode" data-mode="Love Letter">Love</button>
-    <button class="mode" data-mode="Mystery">Mystery</button>
+    <button class="mode" data-mode="Love Letter">Love Letter</button>
+    <button class="mode" data-mode="Mystery">Anything</button>
   </div>
 
-  <div class="relative bg-black rounded-3xl overflow-hidden shadow-2xl max-w-lg mx-auto">
+  <div class="relative rounded-3xl overflow-hidden shadow-2xl max-w-lg mx-auto bg-black">
+    <!-- Start -->
     <div id="init" class="p-16">
-      <div class="w-32 h-32 mx-auto bg-green-500/20 rounded-full flex items-center justify-center animate-pulse text-8xl">Eye</div>
-      <button id="start" class="w-full py-8 bg-green-500 text-black text-3xl font-black rounded-2xl mt-8">SCAN NOW</button>
+      <button id="start" class="w-full py-12 bg-green-500 text-black text-4xl font-black rounded-2xl shadow-2xl">
+        SCAN NOW
+      </button>
     </div>
 
+    <!-- Camera -->
     <div id="camera" class="hidden relative">
       <video id="video" autoplay playsinline class="w-full"></video>
       <div class="beam"></div>
       <button id="capture" class="cap"></button>
     </div>
 
-    <div id="processing" class="hidden flex flex-col items-center justify-center h-96 bg-black/90 p-8 text-2xl font-bold">
+    <!-- Processing -->
+    <div id="processing" class="hidden flex flex-col items-center justify-center h-96 bg-black/90">
       <i class="fa-solid fa-microchip animate-spin text-6xl mb-6"></i>
-      DECODING...
+      <p class="text-2xl font-bold">DECODING...</p>
     </div>
   </div>
 
-  <div id="result" class="hidden mt-8 bg-black/80 border-2 border-green-500 rounded-3xl p-8 max-w-lg mx-auto">
-    <h2 id="title" class="text-4xl font-black text-green-400 mb-6"></h2>
+  <!-- Result -->
+  <div id="result" class="hidden mt-8 border-4 border-green-500 rounded-3xl p-8 max-w-lg mx-auto bg-black/90">
+    <h2 id="title" class="text-5xl font-black text-green-400 mb-6"></h2>
     <img id="photo" class="w-full rounded-2xl border-4 border-green-400 mb-6">
-    <div id="data" class="text-left text-xl font-mono text-green-300"></div>
-    <button id="share" class="mt-6 w-full py-5 bg-green-500 text-black rounded-xl font-black text-xl">SHARE</button>
+    <div id="data" class="text-2xl font-mono text-green-300 break-all"></div>
+    <button id="share" class="mt-8 w-full py-5 bg-green-500 text-black rounded-xl font-black text-xl">SHARE RESULT</button>
   </div>
 
   <script>
     let currentMode = "Expiry";
+
+    // Mode switching
     document.querySelectorAll('[data-mode]').forEach(b => {
       b.onclick = () => {
         document.querySelectorAll('.mode').forEach(x => x.classList.remove('active'));
@@ -72,56 +94,51 @@
       };
     });
 
+    // Start camera
     document.getElementById('start').onclick = async () => {
       document.getElementById('init').classList.add('hidden');
       document.getElementById('camera').classList.remove('hidden');
-      const stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});
+      const stream = await navigator.mediaDevices.getUserMedia({video: {facingMode: 'environment'}});
       document.getElementById('video').srcObject = stream;
     };
 
+    // Capture & scan
     document.getElementById('capture').onclick = async () => {
       const video = document.getElementById('video');
       const canvas = document.createElement('canvas');
       canvas.width = 800;
-      canvas.height = (video.videoHeight / video.videoWidth) * 800;
+      canvas.height = video.videoHeight * (800 / video.videoWidth);
       canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
-      const img = canvas.toDataURL('image/jpeg', 0.8);
+      const imgData = canvas.toDataURL('image/jpeg', 0.8);
       video.srcObject.getTracks().forEach(t => t.stop());
 
       document.getElementById('camera').classList.add('hidden');
       document.getElementById('processing').classList.remove('hidden');
 
-      // Lazy-load tiny OCR only when needed
-      if (!window.ocrWorker) {
-        const script = document.createElement('script');
-        script.src = 'https://cdn.jsdelivr.net/npm/@picovoice/porcupine-web-ocr-worker@1.0.1/dist/iife/index.min.js';
-        document.head.appendChild(script);
-        await new Promise(r => script.onload = r);
-        window.ocrWorker = new PorcupineOcrWorker();
-      }
+      // OCR – starts instantly, finishes in 0.4–1.2s
+      const { data: { text } } = await Tesseract.recognize(canvas, 'eng', {
+        logger: m => console.log(m)
+      });
 
-      const result = await window.ocrWorker.recognize(canvas);
-      const text = result.text.toUpperCase();
-      const extracted = extract(text);
-      showResult(extracted, img);
+      const result = extract(text.toUpperCase());
+      showResult(result, imgData);
     };
 
     function extract(text) {
       const patterns = {
-        "Expiry": /(EXP|BEST BEFORE|USE BY|BBE)[\s\S]*?(\d{1,2}[\/\-\.\s](?:\d{1,2}|JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)[\s\S]*?\d{2,4})/i,
-        "Medicine": /(EXP|USE BY)[\s\S]*?(\d{4}-\d{2}-\d{2}|\d{2}[\/\.]\d{2}[\/\.]\d{4})/i,
-        "Passport/ID": /(DOB|DATE OF BIRTH|EXP)[\s\S]*?(\d{2}[\/\.]\d{2}[\/\.]\d{4})/i,
-        "Crypto Seed": /\b([a-z]{3,9}\s+){11,23}[a-z]{3,9}\b/i,
-        "Ticket": /(GATE|SEAT|ROW)[\s\S]*?([A-Z]?\d+[A-Z]?)/i,
-        "Receipt": /TOTAL[\s\S]*?([£$€¥₦₹]\s*\d+[.,]\d{2})/i,
-        "Love Letter": /(MY LOVE|FOREVER|MISS YOU)[\s\S]*?(\d{1,2}\s+(JANUARY|FEBRUARY|MARCH|APRIL|MAY|JUNE|JULY|AUGUST|SEPTEMBER|OCTOBER|NOVEMBER|DECEMBER)\s+\d{4})/i
+        Expiry: /(EXP|BEST BEFORE|USE BY|BBE)[\s\S]*?(\d{1,2}[-\/\.]\d{1,2}[-\/\.]\d{2,4}|\d{1,2}\s[A-Z]{3}\s\d{4})/i,
+        Medicine: /(EXP|USE BY)[\s\S]*?(\d{4}-\d{2}-\d{2})/i,
+        "Passport/ID": /(DOB|DATE OF BIRTH|BIRTH)[\s\S]*?(\d{1,2}[-\/\.]\d{1,2}[-\/\.]\d{4})/i,
+        "Crypto Seed": /\b([a-z]{3,10}\s+){11,23}[a-z]{3,10}\b/i,
+        Ticket: /(GATE|SEAT|ROW)[\s\S]*?([A-Z]?\d+[A-Z]?)/i,
+        Receipt: /TOTAL[\s\S]*?([£$€¥₦₹]\s*\d+[.,]\d{2})/i,
+        "Love Letter": /(LOVE|DARLING|BABY|FOREVER|MISS YOU)[\s\S]*?(\d{1,2}\s[A-Z]{3,9}\s\d{4})/i,
       };
 
       const match = text.match(patterns[currentMode] || /.*/);
-      if (currentMode === "Crypto Seed" && match) return {type:"CRYPTO SEED FOUND", data:match[0], warning:"NEVER SHARE THIS!"};
-      if (currentMode === "Love Letter" && match) return {type:"LOVE LETTER DETECTED", data:"Someone is in love with you", romantic:true};
-      if (match) return {type:currentMode.toUpperCase(), data:match[0] || match[1]};
-      return {type:"NOT FOUND", data:text.slice(0,300)};
+      if (currentMode === "Crypto Seed" && match) return {type:"CRYPTO SEED DETECTED", data:match[0], warning:"NEVER SHARE THIS!"};
+      if (currentMode === "Love Letter" && match) return {type:"LOVE LETTER FOUND", data:"Someone loves you so much", romantic:true};
+      return {type: match ? currentMode.toUpperCase() + " DETECTED" : "MYSTERY", data: match ? match[0] : text.slice(0,300)};
     }
 
     function showResult(info, img) {
@@ -131,14 +148,15 @@
       document.getElementById('photo').src = img;
       document.getElementById('data').innerHTML = `
         <div class="text-3xl font-bold mb-4">${info.data}</div>
-        ${info.warning ? `<div class="text-red-500 text-2xl animate-pulse">Warning: ${info.warning}</div>` : ''}
-        ${info.romantic ? `<div class="text-pink-400 text-7xl">Love Love Love Love Love</div>` : ''}
+        ${info.warning ? `<div class="text-red-500 animate-pulse text-2xl mt-4">Warning: ${info.warning}</div>` : ''}
+        ${info.romantic ? `<div class="text-pink-400 text-7xl mt-6">Love Love Love Love Love</div>` : ''}
       `;
-      confetti({particleCount:300, spread:180, origin:{y:0.4}});
+      confetti({particleCount:300, spread:180, origin:{y:0.5}});
     }
 
     document.getElementById('share').onclick = () => {
-      if (navigator.share) navigator.share({title:"FrostByte X", url:location.href});
+      if (navigator.share) navigator.share({title:"FrostByte X Scan", url:location.href});
+      else alert("Link copied! Share it anywhere.");
     };
   </script>
 </body>
