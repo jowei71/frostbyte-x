@@ -3,129 +3,71 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>FrostByte X • Universal OCR Scanner</title>
+  <title>FrostByte X • Instant Scanner</title>
   <meta name="theme-color" content="#000000">
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.0/dist/tesseract.min.js"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Inter:wght@400;600;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@900&family=Inter:wght@900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
   <style>
-    body {font-family:'Inter',sans-serif;background:#000;color:#fff;min-height:100vh;overflow-x:hidden;}
-    .matrix {background:#000;line-height:1.2;font-family:'Orbitron',monospace;letter-spacing:2px;}
-    .scan-beam {position:absolute;top:0;width:100%;height:6px;background:linear-gradient(90deg,transparent,#00ff41,transparent);box-shadow:0 0 40px #00ff41;animation:beam 3s infinite linear;z-index:20;}
-    @keyframes beam{0%{top:-10%}100%{top:110%}}
-    .glitch{color:#00ff41;text-shadow:0 0 10px #00ff41;animation:glitch 2s infinite alternate;}
-    @keyframes glitch{0%,100%{transform:translate(0)}2%{transform:translate(-2px,2px)}4%{transform:translate(2px,-2px)}}
-    .capture-btn{width:88px;height:88px;background:#000;border:6px solid #00ff41;border-radius:50%;position:absolute;bottom:32px;left:50%;transform:translateX(-50%);z-index:30;box-shadow:0 0 40px #00ff41;}
-    .capture-btn::after{content:'';position:absolute;inset:8px;background:#00ff41;border-radius:50%;animation:pulse 2s infinite;}
-    @keyframes pulse{0%{transform:scale(0.8);opacity:1}100%{transform:scale(1.8);opacity:0}}
-    .mode-btn{transition:all 0.3s;background:rgba(0,255,65,0.15);border:1px solid #00ff41;}
-    .mode-btn.active{background:#00ff41;color:#000;font-weight:900;}
-    .result-card{background:rgba(0,255,65,0.05);border:1px solid #00ff41;box-shadow:0 0 30px rgba(0,255,65,0.3);}
-    .progress-bar {background:rgba(0,255,65,0.2);height:6px;border-radius:3px;overflow:hidden;}
-    .progress-fill {background:#00ff41;height:100%;width:0%;transition:width 0.3s;}
+    body{font-family:'Inter',sans-serif;background:#000;color:#0f0;margin:0;overflow-x:hidden;}
+    .glitch{color:#0f0;text-shadow:0 0 10px #0f0;animation:g 2s infinite;}@keyframes g{0%,100%{transform:translate(0)}2%{transform:translate(-2px,2px)}4%{transform:translate(2px,-2px)}}
+    .beam{position:absolute;top:0;width:100%;height:6px;background:linear-gradient(90deg,transparent,#0f0,transparent);box-shadow:0 0 40px #0f0;animation:b 3s infinite linear;z-index:20;}
+    @keyframes b{0%{top:-10%}100%{top:110%}}
+    .cap{width:88px;height:88px;border:6px solid #0f0;border-radius:50%;position:absolute;bottom:32px;left:50%;transform:translateX(-50%);box-shadow:0 0 40px #0f0;background:#000;}
+    .cap::after{content:'';position:absolute;inset:8px;background:#0f0;border-radius:50%;animation:p 2s infinite;}
+    @keyframes p{0%{transform:scale(0.8);opacity:1}100%{transform:scale(1.8);opacity:0}}
+    .mode{background:rgba(0,255,0,0.1);border:2px solid #0f0;padding:12px 20px;border-radius:50px;font-weight:900;}
+    .mode.active{background:#0f0;color:#000;}
   </style>
 </head>
-<body class="text-center">
-  <div class="fixed inset-0 matrix text-green-500 text-xs opacity-20 pointer-events-none overflow-hidden">
-    <pre>01001011 01000101 01011001 01010011 01000001 01010100 01000101 01001110 01000001...</pre>
+<body class="text-center p-4">
+
+  <h1 class="text-7xl font-black glitch mt-10">FROSTBYTE <span class="text-green-400">X</span></h1>
+  <p class="text-2xl text-green-400">Instant Reality Scanner</p>
+
+  <div class="flex flex-wrap justify-center gap-4 my-8 max-w-4xl mx-auto">
+    <button class="mode active" data-mode="Expiry">Food</button>
+    <button class="mode" data-mode="Medicine">Medicine</button>
+    <button class="mode" data-mode="Passport/ID">ID/Passport</button>
+    <button class="mode" data-mode="Crypto Seed">Crypto</button>
+    <button class="mode" data-mode="Ticket">Ticket</button>
+    <button class="mode" data-mode="Receipt">Receipt</button>
+    <button class="mode" data-mode="Love Letter">Love</button>
+    <button class="mode" data-mode="Mystery">Mystery</button>
   </div>
 
-  <header class="relative pt-10 pb-6">
-    <h1 class="text-6xl font-black tracking-tighter glitch">FROSTBYTE <span class="text-green-400">X</span></h1>
-    <p class="text-green-400 text-xl mt-2">Universal OCR Scanner • <span id="status">Initializing AI...</span></p>
-    <div class="max-w-xs mx-auto mt-4 progress-bar"><div class="progress-fill" id="init-progress"></div></div>
-  </header>
-
-  <div class="max-w-lg mx-auto px-4">
-    <div class="flex flex-wrap justify-center gap-3 mb-8">
-      <button class="mode-btn px-5 py-3 rounded-full text-sm font-bold active:scale-95 active bg-green-500 text-black" data-mode="Expiry">Food</button>
-      <button class="mode-btn px-5 py-3 rounded-full text-sm font-bold active:scale-95" data-mode="Medicine">Medicine</button>
-      <button class="mode-btn px-5 py-3 rounded-full text-sm font-bold active:scale-95" data-mode="Passport/ID">Passport/ID</button>
-      <button class="mode-btn px-5 py-3 rounded-full text-sm font-bold active:scale-95" data-mode="Crypto Seed">Crypto Seed</button>
-      <button class="mode-btn px-5 py-3 rounded-full text-sm font-bold active:scale-95" data-mode="Ticket">Ticket</button>
-      <button class="mode-btn px-5 py-3 rounded-full text-sm font-bold active:scale-95" data-mode="Receipt">Receipt</button>
-      <button class="mode-btn px-5 py-3 rounded-full text-sm font-bold active:scale-95" data-mode="Love Letter">Love Letter</button>
-      <button class="mode-btn px-5 py-3 rounded-full text-sm font-bold active:scale-95" data-mode="Mystery">Mystery</button>
+  <div class="relative bg-black rounded-3xl overflow-hidden shadow-2xl max-w-lg mx-auto">
+    <div id="init" class="p-16">
+      <div class="w-32 h-32 mx-auto bg-green-500/20 rounded-full flex items-center justify-center animate-pulse text-8xl">Eye</div>
+      <button id="start" class="w-full py-8 bg-green-500 text-black text-3xl font-black rounded-2xl mt-8">SCAN NOW</button>
     </div>
 
-    <div class="relative rounded-3xl overflow-hidden shadow-2xl bg-black/80">
-      <div id="init" class="p-12 space-y-8">
-        <div class="w-32 h-32 mx-auto bg-green-500/20 rounded-full flex items-center justify-center animate-pulse">
-          <i class="fa-solid fa-eye text-6xl text-green-400"></i>
-        </div>
-        <button id="start" class="w-full py-6 bg-green-500 text-black rounded-2xl text-2xl font-black opacity-50" disabled>Preparing OCR Engine...</button>
-        <p class="text-sm text-green-400">First load takes ~5-10s · Then instant forever</p>
-      </div>
-
-      <div id="camera" class="hidden relative">
-        <video id="video" autoplay playsinline class="w-full"></video>
-        <div class="scan-beam"></div>
-        <button id="capture" class="capture-btn"></button>
-      </div>
-
-      <div id="processing" class="hidden flex flex-col items-center justify-center h-96 bg-black/90 p-8">
-        <i class="fa-solid fa-microchip text-6xl text-green-400 animate-spin mb-6"></i>
-        <p class="text-2xl font-bold glitch">OCR SCANNING... <span id="ocr-percent">0%</span></p>
-        <div class="max-w-xs w-full progress-bar mt-4"><div class="progress-fill" id="ocr-progress"></div></div>
-      </div>
+    <div id="camera" class="hidden relative">
+      <video id="video" autoplay playsinline class="w-full"></video>
+      <div class="beam"></div>
+      <button id="capture" class="cap"></button>
     </div>
 
-    <div id="result" class="hidden mt-8 result-card rounded-3xl p-8 space-y-6">
-      <h2 id="title" class="text-4xl font-black text-green-400"></h2>
-      <img id="photo" class="w-full rounded-2xl border-4 border-green-400">
-      <div id="data" class="text-left text-lg space-y-3 font-mono text-green-300"></div>
-      <button onclick="location.reload()" class="w-full py-4 bg-white/10 rounded-xl font-bold">SCAN AGAIN</button>
+    <div id="processing" class="hidden flex flex-col items-center justify-center h-96 bg-black/90 p-8 text-2xl font-bold">
+      <i class="fa-solid fa-microchip animate-spin text-6xl mb-6"></i>
+      DECODING...
     </div>
+  </div>
+
+  <div id="result" class="hidden mt-8 bg-black/80 border-2 border-green-500 rounded-3xl p-8 max-w-lg mx-auto">
+    <h2 id="title" class="text-4xl font-black text-green-400 mb-6"></h2>
+    <img id="photo" class="w-full rounded-2xl border-4 border-green-400 mb-6">
+    <div id="data" class="text-left text-xl font-mono text-green-300"></div>
+    <button id="share" class="mt-6 w-full py-5 bg-green-500 text-black rounded-xl font-black text-xl">SHARE</button>
   </div>
 
   <script>
-    let worker = null;
     let currentMode = "Expiry";
-
-    const modes = {
-      "Expiry":     {regex: /(EXP|BEST BEFORE|USE BY|BBE).*?(\d{1,2}[\/\-\.\s](?:\d{1,2}|JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)[\/\-\.\s]\d{2,4})/gi},
-      "Medicine":   {regex: /(EXP|USE BY).*?(\d{4}-\d{2}-\d{2}|\d{2}[\/\.]\d{2}[\/\.]\d{4})/gi},
-      "Passport/ID":{regex: /(ID|PASSPORT|DOB|EXP|DATE OF BIRTH).*?(\d{2}[\/\.]\d{2}[\/\.]\d{4})/gi},
-      "Crypto Seed":{regex: /\b([a-z]{3,8}[\s-]?){11,23}[a-z]{3,8}\b/gi, secret: true},
-      "Ticket":     {regex: /(GATE|SEAT|DATE|EVENT|ROW).*?([A-Z]?\d+[A-Z]?)/gi},
-      "Receipt":    {regex: /(TOTAL|AMOUNT).*?([£$€¥₦₹₽]\s?\d+[.,]\d{2})/gi},
-      "Love Letter":{regex: /(my love|forever|darling|miss you|always yours).*?(\d{1,2}\s+(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4})/gi, romantic: true},
-      "Mystery":    {regex: /.*/g}
-    };
-
-    // Preload OCR engine on page load
-    async function initOCR() {
-      const progress = document.getElementById('init-progress');
-      worker = Tesseract.createWorker({
-        logger: m => {
-          if (m.status === 'recognizing text') {
-            const pct = Math.round(m.progress * 100);
-            document.getElementById('ocr-percent').textContent = pct + '%';
-            document.getElementById('ocr-progress').style.width = pct + '%';
-          }
-          if (m.status === 'loading tesseract core' || m.status === 'loading language traineddata') {
-            progress.style.width = (m.progress * 100) + '%';
-          }
-        }
-      });
-
-      await worker.load();
-      await worker.loadLanguage('eng');
-      await worker.initialize('eng');
-
-      document.getElementById('status').textContent = 'READY — Tap to scan';
-      document.getElementById('start').disabled = false;
-      document.getElementById('start').classList.remove('opacity-50');
-      document.getElementById('start').textContent = 'ACTIVATE SCANNER';
-    }
-    initOCR();
-
     document.querySelectorAll('[data-mode]').forEach(b => {
       b.onclick = () => {
-        document.querySelectorAll('.mode-btn').forEach(x => x.classList.remove('active','bg-green-500','text-black'));
-        b.classList.add('active','bg-green-500','text-black');
+        document.querySelectorAll('.mode').forEach(x => x.classList.remove('active'));
+        b.classList.add('active');
         currentMode = b.dataset.mode;
       };
     });
@@ -133,40 +75,53 @@
     document.getElementById('start').onclick = async () => {
       document.getElementById('init').classList.add('hidden');
       document.getElementById('camera').classList.remove('hidden');
-      const stream = await navigator.mediaDevices.getUserMedia({video: {facingMode: 'environment'}});
+      const stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});
       document.getElementById('video').srcObject = stream;
     };
 
     document.getElementById('capture').onclick = async () => {
       const video = document.getElementById('video');
       const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      canvas.width = Math.min(video.videoWidth, 1200);
-      canvas.height = canvas.width * (video.videoHeight / video.videoWidth);
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      canvas.width = 800;
+      canvas.height = (video.videoHeight / video.videoWidth) * 800;
+      canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+      const img = canvas.toDataURL('image/jpeg', 0.8);
       video.srcObject.getTracks().forEach(t => t.stop());
 
       document.getElementById('camera').classList.add('hidden');
       document.getElementById('processing').classList.remove('hidden');
 
-      const { data: { text } } = await worker.recognize(canvas);
-      const result = analyze(text.toUpperCase());
-      showResult(result, canvas.toDataURL());
+      // Lazy-load tiny OCR only when needed
+      if (!window.ocrWorker) {
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/@picovoice/porcupine-web-ocr-worker@1.0.1/dist/iife/index.min.js';
+        document.head.appendChild(script);
+        await new Promise(r => script.onload = r);
+        window.ocrWorker = new PorcupineOcrWorker();
+      }
+
+      const result = await window.ocrWorker.recognize(canvas);
+      const text = result.text.toUpperCase();
+      const extracted = extract(text);
+      showResult(extracted, img);
     };
 
-    function analyze(text) {
-      const mode = modes[currentMode];
-      const matches = [...text.matchAll(mode.regex)];
-      if (currentMode === "Crypto Seed" && matches.length > 0) {
-        return {type: "CRYPTO SEED DETECTED", data: matches[0][0].trim(), warning: "NEVER SHARE THIS IMAGE"};
-      }
-      if (currentMode === "Love Letter" && matches.length > 0) {
-        return {type: "Secret Love Letter Found", data: "Someone loves you deeply", romantic: true};
-      }
-      if (matches.length > 0) {
-        return {type: currentMode + " DETECTED", data: matches.map(m => m[0]).join(' • ')};
-      }
-      return {type: "Nothing Found", data: text.slice(0, 400) || "No readable text"};
+    function extract(text) {
+      const patterns = {
+        "Expiry": /(EXP|BEST BEFORE|USE BY|BBE)[\s\S]*?(\d{1,2}[\/\-\.\s](?:\d{1,2}|JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)[\s\S]*?\d{2,4})/i,
+        "Medicine": /(EXP|USE BY)[\s\S]*?(\d{4}-\d{2}-\d{2}|\d{2}[\/\.]\d{2}[\/\.]\d{4})/i,
+        "Passport/ID": /(DOB|DATE OF BIRTH|EXP)[\s\S]*?(\d{2}[\/\.]\d{2}[\/\.]\d{4})/i,
+        "Crypto Seed": /\b([a-z]{3,9}\s+){11,23}[a-z]{3,9}\b/i,
+        "Ticket": /(GATE|SEAT|ROW)[\s\S]*?([A-Z]?\d+[A-Z]?)/i,
+        "Receipt": /TOTAL[\s\S]*?([£$€¥₦₹]\s*\d+[.,]\d{2})/i,
+        "Love Letter": /(MY LOVE|FOREVER|MISS YOU)[\s\S]*?(\d{1,2}\s+(JANUARY|FEBRUARY|MARCH|APRIL|MAY|JUNE|JULY|AUGUST|SEPTEMBER|OCTOBER|NOVEMBER|DECEMBER)\s+\d{4})/i
+      };
+
+      const match = text.match(patterns[currentMode] || /.*/);
+      if (currentMode === "Crypto Seed" && match) return {type:"CRYPTO SEED FOUND", data:match[0], warning:"NEVER SHARE THIS!"};
+      if (currentMode === "Love Letter" && match) return {type:"LOVE LETTER DETECTED", data:"Someone is in love with you", romantic:true};
+      if (match) return {type:currentMode.toUpperCase(), data:match[0] || match[1]};
+      return {type:"NOT FOUND", data:text.slice(0,300)};
     }
 
     function showResult(info, img) {
@@ -175,12 +130,16 @@
       document.getElementById('title').textContent = info.type;
       document.getElementById('photo').src = img;
       document.getElementById('data').innerHTML = `
-        <div class="text-2xl font-bold text-green-400">${info.data}</div>
-        ${info.warning ? `<div class="text-red-500 text-xl animate-pulse mt-4">⚠ ${info.warning} ⚠</div>` : ''}
-        ${info.romantic ? `<div class="text-pink-500 text-6xl mt-4">Love Love Love Love Love</div>` : ''}
+        <div class="text-3xl font-bold mb-4">${info.data}</div>
+        ${info.warning ? `<div class="text-red-500 text-2xl animate-pulse">Warning: ${info.warning}</div>` : ''}
+        ${info.romantic ? `<div class="text-pink-400 text-7xl">Love Love Love Love Love</div>` : ''}
       `;
-      confetti({particleCount: 300, spread: 180, origin: {y: 0.4}, colors: ['#00ff41', '#39ff14']});
+      confetti({particleCount:300, spread:180, origin:{y:0.4}});
     }
+
+    document.getElementById('share').onclick = () => {
+      if (navigator.share) navigator.share({title:"FrostByte X", url:location.href});
+    };
   </script>
 </body>
 </html>
