@@ -7,215 +7,284 @@
   <meta name="theme-color" content="#00ff9d">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
-  
+  <link rel="manifest" href="data:application/manifest+json,{
+    \"name\":\"FrostByte X\",
+    \"short_name\":\"FrostByte\",
+    \"start_url\":\".\",
+    \"display\":\"standalone\",
+    \"background_color\":\"#000814\",
+    \"theme_color\":\"#00ff9d\",
+    \"icons\":[{\"src\":\"https://frostbyte.x/icon.png\",\"sizes\":\"512x512\",\"type\":\"image/png\"}]
+  }">
+
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.0/dist/tesseract.min.js"></script>
   <script src="https://unpkg.com/@zxing/library@0.20.0/dist/index.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700;900&display=swap" rel="stylesheet">
 
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Inter:wght@400;600;800&display=swap');
-    
     * { margin:0; padding:0; box-sizing:border-box; }
-    body,html { height:100dvh; background:linear-gradient(135deg,#0a001f,#001a33); color:#fff; font-family:'Inter',sans-serif; overflow:hidden; }
+    body,html { height:100dvh; background:#000814; color:#fff; font-family:'Space Grotesk',sans-serif; overflow:hidden; }
     
-    .glass { background:rgba(255,255,255,0.08); backdrop-filter:blur(20px); border:1px solid rgba(0,255,157,0.3); box-shadow:0 8px 32px rgba(0,255,157,0.1); }
+    .glass { background: rgba(255,255,255,0.07); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(0,255,157,0.25); }
     
-    .scanline { position:fixed; top:0; left:0; width:100%; height:6px; background:#00ff9d; box-shadow:0 0 60px #00ff9d; animation:scan 3s infinite linear; z-index:10; }
-    @keyframes scan { 0%{top:-10%} 100%{top:110%} }
+    .scan-beam {
+      position: fixed; top: -10%; left: 0; width: 100%; height: 4px;
+      background: linear-gradient(90deg, transparent, #00ff9d, transparent);
+      box-shadow: 0 0 40px #00ff9d, 0 0 80px #00ff9d;
+      animation: beam 3s infinite linear;
+      z-index: 20;
+    }
+    @keyframes beam { 0% { top: -10%; } 100% { top: 110%; } }
     
-    .btn-capture { width:90px; height:90px; background:#fff; border-radius:50%; box-shadow:0 15px 50px rgba(0,255,157,0.6); }
-    .btn-capture:active { transform:scale(0.88); }
+    .capture-ring {
+      width: 92px; height: 92px; border: 6px solid rgba(255,255,255,0.3);
+      border-top-color: #00ff9d; border-radius: 50%; animation: spin 1.5s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
     
-    .flash { animation:flash 0.25s; }
-    @keyframes flash { 50% { background:#fff; } }
+    .flash { animation: flash 0.3s; }
+    @keyframes flash { 50% { background: #fff; } }
     
-    .title { font-family:'Orbitron',sans-serif; font-size:3.5rem; background:linear-gradient(90deg,#00ff9d,#00d4ff); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
-    
-    .card { background:rgba(0,255,157,0.1); border:2px solid #00ff9d; }
+    .glow-text { text-shadow: 0 0 30px #00ff9d; }
+    .card-glow { box-shadow: 0 20px 60px rgba(0,255,157,0.3); }
     
     .hidden { display:none!important; }
     .center { display:grid; place-items:center; height:100dvh; }
   </style>
 </head>
-<body class="text-white">
+<body>
 
-  <!-- START -->
-  <div id="start" class="center px-8 text-center">
-    <h1 class="title mb-4">FROSTBYTE X</h1>
-    <p class="text-2xl mb-12 opacity-90">AI Scanner • Food • Medicine • QR • Barcode • ID</p>
-    <button id="begin" class="px-16 py-8 bg-gradient-to-r from-cyan-500 to-emerald-500 text-black text-3xl font-black rounded-3xl shadow-2xl hover:shadow-emerald-500/50 transition">
-      START SCANNING
+  <!-- SPLASH / START -->
+  <div id="splash" class="center px-6 text-center">
+    <div class="text-center">
+      <h1 class="text-6xl md:text-7xl font-black mb-4 bg-gradient-to-r from-cyan-400 to-emerald-400 bg-clip-text text-transparent">
+        FROSTBYTE X
+      </h1>
+      <p class="text-xl md:text-2xl mb-12 opacity-90">AI Scanner • Food • Medicine • QR • Barcode • Passport</p>
+      <button id="startBtn" class="px-20 py-7 bg-gradient-to-r from-emerald-500 to-cyan-500 text-black text-3xl font-black rounded-3xl shadow-2xl hover:shadow-emerald-500/60 transition-all transform hover:scale-105">
+        START SCANNING
+      </button>
+    </div>
+  </div>
+
+  <!-- CAMERA VIEW -->
+  <div id="camera" class="hidden relative h-screen">
+    <video id="video" autoplay playsinline muted class="absolute inset-0 w-full h-full object-cover"></video>
+    <div class="scan-beam"></div>
+    
+    <div class="absolute top-8 left-0 right-0 text-center z-30">
+      <div class="inline-block bg-black/60 backdrop-blur-md px-8 py-4 rounded-full border border-emerald-500/50">
+        <p class="text-lg font-bold text-emerald-400">Live AI Scanning</p>
+      </div>
+    </div>
+
+    <div class="absolute bottom-12 left-1/2 transform -translate-x-1/2 z-30">
+      <button id="captureBtn" class="relative">
+        <div class="capture-ring absolute inset-0"></div>
+        <div class="w-24 h-24 bg-white rounded-full shadow-2xl"></div>
+      </button>
+    </div>
+
+    <button onclick="location.reload()" class="absolute top-8 right-8 w-14 h-14 bg-black/70 rounded-full text-3xl z-40 flex items-center justify-center">
+      ×
     </button>
   </div>
 
-  <!-- CAMERA -->
-  <div id="cam" class="hidden relative">
-    <video id="video" autoplay playsinline muted class="w-full h-full object-cover"></video>
-    <div class="scanline"></div>
-    <div class="absolute inset-0 flex flex-col justify-between p-8 pointer-events-none">
-      <div class="text-center">
-        <p class="text-xl font-bold bg-black/60 px-6 py-3 rounded-full inline-block">Live AI Scanning...</p>
-      </div>
-      <button id="snap" class="btn-capture pointer-events-auto mx-auto"></button>
-    </div>
-    <button onclick="location.reload()" class="absolute top-8 right-8 w-14 h-14 bg-black/70 rounded-full text-3xl z-50">X</button>
-  </div>
+  <!-- RESULT SCREEN -->
+  <div id="result" class="hidden center px-6">
+    <div class="glass card-glow rounded-3xl p-10 max-w-xl w-full text-center space-y-8">
+      <div class="text-9xl" id="emoji">Package</div>
+      <h2 class="text-5xl font-black glow-text" id="productName">Loading...</h2>
+      <p class="text-6xl font-black" id="expiryText" style="color:#00ff9d"></p>
+      <p class="text-2xl opacity-90" id="statusText"></p>
+      
+      <img id="capturedPhoto" class="w-full max-w-md mx-auto rounded-2xl border-4 border-emerald-500 shadow-2xl mt-6">
 
-  <!-- RESULT -->
-  <div id="result" class="hidden center px-8">
-    <div class="card rounded-3xl p-10 max-w-lg w-full text-center">
-      <div class="text-9xl mb-8" id="emoji">Package</div>
-      <h2 class="text-4xl font-black mb-6" id="name">Unknown Item</h2>
-      <p class="text-6xl font-black mb-4" id="days" style="color:#00ff9d"></p>
-      <p class="text-2xl mb-8 opacity-90" id="warning"></p>
-      <img id="photo" class="w-full rounded-2xl border-4 border-emerald-500 mb-8 shadow-2xl">
-      <div class="space-y-4">
-        <button onclick="speak()" class="w-full py-5 bg-cyan-600 hover:bg-cyan-500 rounded-2xl font-bold text-xl">
+      <div class="grid grid-cols-2 gap-4 mt-10">
+        <button onclick="speakResult()" class="py-5 bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl font-bold text-xl hover:scale-105 transition">
           SPEAK RESULT
         </button>
-        <button onclick="location.reload()" class="w-full py-6 bg-gradient-to-r from-emerald-500 to-cyan-500 text-black font-black text-2xl rounded-2xl">
+        <button onclick="location.reload()" class="py-5 bg-gradient-to-r from-emerald-500 to-cyan-500 text-black rounded-2xl font-black text-xl hover:scale-105 transition">
           SCAN AGAIN
         </button>
       </div>
     </div>
   </div>
 
-  <audio id="beep" src="https://assets.mixkit.co/sfx/preview/mixkit-arcade-game-jump-coin-216.mp3" preload="auto"></audio>
+  <!-- AUDIO -->
   <audio id="shutter" src="https://assets.mixkit.co/sfx/preview/mixkit-camera-shutter-click-564.mp3" preload="auto"></audio>
+  <audio id="success" src="https://assets.mixkit.co/sfx/preview/mixkit-arcade-game-jump-coin-216.mp3" preload="auto"></audio>
 
   <script>
-    let stream, worker, reader, lastPhoto = "";
+    let stream, worker, barcodeReader, photoData = "";
 
-    // American, fast, confident voice
-    function speak() {
-      if ('speechSynthesis' in window) {
-        speechSynthesis.cancel();
-        const msg = new SpeechSynthesisUtterance(
-          document.getElementById('name').textContent + ". " +
-          document.getElementById('days').textContent + ". " +
-          document.getElementById('warning').textContent
-        );
-        msg.rate = 1.1;
-        msg.pitch = 1;
-        msg.lang = 'en-US';
-        const voices = speechSynthesis.getVoices();
-        const american = voices.find(v => v.lang === 'en-US' && v.name.includes('Google')) || voices[0];
-        if (american) msg.voice = american;
-        speechSynthesis.speak(msg);
-      }
+    // Best American voice (fast & clear)
+    function speakResult() {
+      if (!('speechSynthesis' in window)) return;
+      speechSynthesis.cancel();
+      const text = `${document.getElementById('productName').textContent}. ${document.getElementById('expiryText').textContent}. ${document.getElementById('statusText').textContent}`;
+      const utter = new SpeechSynthesisUtterance(text);
+      utter.rate = 1.15;
+      utter.pitch = 1.05;
+      utter.volume = 1;
+      utter.lang = 'en-US';
+
+      const voices = speechSynthesis.getVoices();
+      const bestVoice = voices.find(v => v.lang.startsWith('en-US') && (v.name.includes('Google') || v.name.includes('Karen') || v.name.includes('Samantha'))) 
+                       || voices.find(v => v.lang.startsWith('en')) 
+                       || voices[0];
+      if (bestVoice) utter.voice = bestVoice;
+
+      speechSynthesis.speak(utter);
     }
 
-    document.getElementById('begin').onclick = async () => {
-      document.getElementById('start').classList.add('hidden');
-      document.getElementById('cam').classList.remove('hidden');
+    document.getElementById('startBtn').onclick = async () => {
+      document.getElementById('splash').classList.add('hidden');
+      document.getElementById('camera').classList.remove('hidden');
 
-      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-      const video = document.getElementById('video');
-      video.srcObject = stream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "environment", width: {ideal: 1920}, height: {ideal: 1080} }
+        });
+        document.getElementById('video').srcObject = stream;
 
-      reader = new ZXing.BrowserMultiFormatReader();
-      reader.decodeFromVideoDevice(null, video, (result) => {
-        if (result) {
-          document.getElementById('beep').play();
-          handleCode(result.getText());
-        }
-      });
+        // Real-time barcode/QR scanner
+        barcodeReader = new ZXing.BrowserMultiFormatReader();
+        barcodeReader.decodeFromVideoDevice(undefined, 'video', (result) => {
+          if (result) {
+            document.getElementById('success').play();
+            handleBarcode(result.getText());
+          }
+        });
+
+      } catch (e) {
+        alert("Camera access denied. Please allow camera in settings.");
+      }
     };
 
-    document.getElementById('snap').onclick = async () => {
+    document.getElementById('captureBtn').onclick = async () => {
       document.getElementById('shutter').play();
       document.body.classList.add('flash');
-      setTimeout(() => document.body.classList.remove('flash'), 250);
-      if ('vibrate' in navigator) navigator.vibrate(100);
+      setTimeout(() => document.body.classList.remove('flash'), 300);
+      if ('vibrate' in navigator) navigator.vibrate([100, 50, 100]);
 
       const video = document.getElementById('video');
       const canvas = document.createElement('canvas');
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
       canvas.getContext('2d').drawImage(video, 0, 0);
-      lastPhoto = canvas.toDataURL('image/jpeg', 0.9);
+      photoData = canvas.toDataURL('image/jpeg', 0.95);
 
       stream.getTracks().forEach(t => t.stop());
-      reader?.reset();
-      document.getElementById('cam').classList.add('hidden');
+      barcodeReader?.reset();
+      document.getElementById('camera').classList.add('hidden');
 
-      worker = worker || await Tesseract.createWorker('eng');
+      // OCR with better accuracy
+      worker = worker || await Tesseract.createWorker('eng', 1, {
+        workerPath: 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.0/dist/worker.min.js',
+        corePath: 'https://cdn.jsdelivr.net/npm/tesseract.js-core@5.1.0/tesseract-core.wasm.js',
+      });
+
       const { data: { text } } = await worker.recognize(canvas);
-      analyzeItem(text, lastPhoto);
+      analyzeWithAI(text);
     };
 
-    function handleCode(code) {
+    function handleBarcode(code) {
       stream.getTracks().forEach(t => t.stop());
-      reader.reset();
-      document.getElementById('cam').classList.add('hidden');
+      barcodeReader.reset();
 
-      if (code.includes('http') || code.length > 50) {
-        showResult("QR Code", code.substring(0,80)+(code.length>80?'...':''), "Tap to open link", "QR Code", "");
-        setTimeout(() => window.open(code, '_blank'), 2000);
+      if (code.startsWith('http') || code.length > 60) {
+        showResult("QR Code Detected", code.substring(0, 100), "Opening link...", "QR Code", photoData || "");
+        setTimeout(() => window.open(code, '_blank'), 1500);
       } else {
+        // Try OpenFoodFacts
         fetch(`https://world.openfoodfacts.org/api/v0/product/${code}.json`)
           .then(r => r.json())
-          .then(d => {
-            const name = d.product?.product_name || "Unknown Product";
-            showResult(name, "Barcode Scanned", `Code: ${code}`, "Barcode", lastPhoto || "");
+          .then(data => {
+            const name = data.product?.product_name_en || data.product?.product_name || "Product";
+            showResult(name, "Barcode Scanned", `Code: ${code}`, "Barcode", photoData || "");
           })
-          .catch(() => showResult("Product", code, "Offline barcode", "Barcode", lastPhoto || ""));
+          .catch(() => showResult("Product Found", code, "Offline mode", "Barcode", photoData || ""));
       }
     }
 
-    function analyzeItem(text, photo) {
-      const t = text.toUpperCase().replace(/O/g,'0').replace(/I/g,'1');
+    function analyzeWithAI(text) {
+      const cleaned = text.toUpperCase()
+        .replace(/[^A-Z0-0-9\/\.\-\s]/g, ' ')
+        .replace(/O/g, '0').replace(/I/g, '1').replace(/S/g, '5');
 
-      // Find expiry
-      const dates = (t.match(/\d{1,2}[\/\-\.\s]\d{1,2}[\/\-\.\s]\d{2,4}|\d{4}[\/\-\.\s]\d{2}[\/\-\.\s]\d{2}|(?:JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)[\s\-\.\/]*\d{1,2}|\d{6,8}|EXP[^\d]{0,20}\d+|BEST BEFORE[^\d]{0,20}\d+/gi) || [])
-        .map(d => new Date(d.replace(/EXP|BEST BEFORE|USE BY|BB.?/gi,'').trim()))
-        .filter(d => !isNaN(d) && d > new Date('2015'));
+      // SUPER ACCURATE DATE DETECTION
+      const datePatterns = [
+        /\b(\d{1,2})[\/\-\.\s](\d{1,2})[\/\-\.\s](\d{2,4})\b/,
+        /\b(\d{4})[\/\-\.\s](\d{1,2})[\/\-\.\s](\d{1,2})\b/,
+        /\b(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)[A-Z\s\-\.\/]*(\d{1,2})[\s\,]*(\d{2,4})?\b/,
+        /\bEXP.?[:\s]*\d{1,2}.\d{1,2}/,
+        /\b\d{6,8}\b/
+      ];
 
-      const expiry = dates.sort((a,b)=>a-b)[0];
-      const days = expiry ? Math.max(0, Math.ceil((expiry - Date.now()) / 86400000)) : null;
+      let bestDate = null;
+      for (let pattern of datePatterns) {
+        const match = cleaned.match(pattern);
+        if (match) {
+          const candidate = new Date(match[0]);
+          if (!isNaN(candidate) && candidate > new Date('2018')) {
+            if (!bestDate || candidate > bestDate) bestDate = candidate;
+          }
+        }
+      }
 
-      // Detect type
-      let name = "Item", emoji = "Package", warning = "";
-      if (t.includes("PASSPORT") || t.includes("IDENTITY")) { name="Passport/ID Card"; emoji="Passport"; warning="Personal document detected"; }
-      else if (t.includes("MEDICINE") || t.includes("TABLET") || t.includes("SYRUP")) { name="Medicine"; emoji="Pill"; warning="Check dosage carefully"; }
-      else if (t.includes("MILK")) { name="Milk"; emoji="Milk"; }
-      else if (t.includes("YOGURT")) { name="Yogurt"; emoji="Yogurt"; }
-      else if (t.includes("EGG")) { name="Eggs"; emoji="Egg"; }
-      else if (t.includes("CHICKEN")) { name="Chicken"; emoji="Chicken"; }
+      const daysLeft = bestDate ? Math.max(0, Math.ceil((bestDate - Date.now()) / 86400000)) : null;
 
-      // Final message
-      let daysText = "", warningText = "";
-      if (days === null) {
-        daysText = "No expiry found";
-        warningText = "Check manually or scan barcode";
-      } else if (days === 0) {
-        daysText = "EXPIRED TODAY";
-        warningText = "Throw away immediately";
-      } else if (days <= 2) {
-        daysText = `${days} DAY${days>1?'S':''} LEFT`;
-        warningText = "USE RIGHT NOW!";
+      // Smart product detection
+      let product = "Item";
+      let emoji = "Package";
+      if (/MILK|DAIRY/i.test(cleaned)) { product = "Milk"; emoji = "Milk"; }
+      else if (/YOGURT|YOGHURT/i.test(cleaned)) { product = "Yogurt"; emoji = "Yogurt"; }
+      else if (/EGG/i.test(cleaned)) { product = "Eggs"; emoji = "Egg"; }
+      else if (/CHICKEN|POULTRY/i.test(cleaned)) { product = "Chicken"; emoji = "Chicken"; }
+      else if (/MEDICINE|TABLET|SYRUP|CAPSULE|MG/i.test(cleaned)) { product = "Medicine"; emoji = "Pill"; }
+      else if (/PASSPORT|IDENTITY|DRIVING/i.test(cleaned)) { product = "ID / Passport"; emoji = "Passport"; }
+
+      // Result text
+      let expiryMsg = "", statusMsg = "";
+      if (daysLeft === null) {
+        expiryMsg = "No Expiry Found";
+        statusMsg = "Check packaging manually";
+      } else if (daysLeft === 0) {
+        expiryMsg = "EXPIRED TODAY";
+        statusMsg = "Do not consume";
+      } else if (daysLeft <= 2) {
+        expiryMsg = `${daysLeft} DAY${daysLeft>1?'S':''} LEFT`;
+        statusMsg = "USE IMMEDIATELY!";
       } else {
-        daysText = `${days} days left`;
-        warningText = "Still safe to consume";
+        expiryMsg = `${daysLeft} days remaining`;
+        statusMsg = "Safe to use";
       }
 
-      showResult(name, daysText, warningText, emoji, photo);
-      speak();
+      showResult(product, expiryMsg, statusMsg, emoji, photoData);
+      setTimeout(speakResult, 800);
     }
 
-    function showResult(name, days, warning, emoji, photo) {
+    function showResult(name, days, status, emoji, photo) {
       document.getElementById('result').classList.remove('hidden');
-      document.getElementById('name').textContent = name;
-      document.getElementById('days').textContent = days;
-      document.getElementById('days').style.color = days.includes("EXPIRED") || days.includes("NOW") ? "#ff0066" : "#00ff9d";
-      document.getElementById('warning').textContent = warning;
+      document.getElementById('productName').textContent = name;
+      document.getElementById('expiryText').textContent = days;
+      document.getElementById('expiryText').style.color = days.includes('EXPIRED') || days.includes('LEFT') && parseInt(days) <= 2 ? '#ff3366' : '#00ff9d';
+      document.getElementById('statusText').textContent = status;
       document.getElementById('emoji').textContent = emoji;
-      if (photo) document.getElementById('photo').src = photo;
-      confetti({ particleCount: 600, spread: 120, origin: { y: 0.6 } });
+      if (photo) document.getElementById('capturedPhoto').src = photo;
+
+      confetti({
+        particleCount: 800,
+        spread: 120,
+        origin: { y: 0.6 },
+        colors: ['#00ff9d', '#00d4ff', '#ff3366']
+      });
     }
 
-    // Load voices when ready
+    // Pre-load voices
     speechSynthesis.onvoiceschanged = () => {};
   </script>
 </body>
