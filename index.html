@@ -1,151 +1,189 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>FrostByte AI • Works Everywhere</title>
-    <meta name="theme-color" content="#000000">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="mobile-web-app-capable" content="yes">
-
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.0/dist/tesseract.min.js"></script>
-
-    <style>
-        * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-        body,html { height:100dvh; background:#000; color:#0f0; font-family:system-ui,-apple-system,sans-serif; overflow:hidden; }
-        #start, #cam, #processing { position:fixed; inset:0; }
-        #video { width:100vw; height:100dvh; object-fit:cover; }
-        .big-btn { position:fixed; bottom:40px; left:50%; transform:translateX(-50%); width:80px; height:80px; background:#fff; border-radius:50%; box-shadow:0 10px 40px rgba(0,0,0,0.6); z-index:99; }
-        .big-btn:active { transform:translateX(-50%) scale(0.9); }
-        .shutter { animation:flash 0.2s; }
-        @keyframes flash { 50% { background:#fff; } }
-        .line { position:fixed; top:0; left:0; right:0; height:4px; background:#0f0; box-shadow:0 0 40px #0f0; animation:scan 3s infinite linear; z-index:10; }
-        @keyframes scan { 0% { top:-10% } 100% { top:110% } }
-        .hidden { display:none!important; }
-        .center { display:flex; align-items:center; justify-content:center; height:100dvh; text-align:center; padding:20px; }
-        h1 { font-size:3rem; font-weight:900; margin-bottom:20px; }
-        p { font-size:1.2rem; opacity:0.8; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>FrostByte X • Ultimate Scanner</title>
+  <meta name="theme-color" content="#000">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body,html{height:100dvh;background:#000;color:#0f0;font-family:system-ui;overflow:hidden}
+    #video{width:100vw;height:100dvh;object-fit:cover}
+    .line{position:fixed;top:0;left:0;right:0;height:6px;background:#0f0;box-shadow:0 0 60px #0f0;animation:s 2.8s infinite linear;z-index:10}
+    @keyframes s{0%{top:-10%}100%{top:110%}}
+    .btn{position:fixed;bottom:40px;left:50%;transform:translateX(-50%);width:86px;height:86px;background:#fff;border-radius:50%;box-shadow:0 15px 50px #000;z-index:99}
+    .btn:active{transform:translateX(-50%) scale(0.88)}
+    .flash{animation:f 0.2s}@keyframes f{50%{background:#fff}}
+    .center{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100dvh;text-align:center;padding:20px}
+    h1{font-size:3.8rem;font-weight:900}
+    .result-box{background:rgba(0,255,0,0.1);border:2px solid #0f0;padding:30px;border-radius:30px;max-width:90%}
+    .big{font-size:5rem;line-height:1}
+    .hidden{display:none!important}
+    button{font-weight:900}
+  </style>
 </head>
 <body>
 
-    <!-- START SCREEN -->
-    <div id="start" class="center flex-col bg-black text-white">
-        <h1>FROSTBYTE AI</h1>
-        <p>Point at any food · Real AI reads expiry dates</p>
-        <button id="open" class="mt-12 px-12 py-6 bg-green-500 text-black text-2xl font-black rounded-2xl shadow-2xl">
-            OPEN CAMERA NOW
-        </button>
+  <div id="start" class="center text-white">
+    <h1>FROSTBYTE <span style="color:#0f0">X</span></h1>
+    <p class="text-2xl mb-10">Barcode • QR • Expiry • Medicine • ID • Crypto</p>
+    <button id="open" class="px-16 py-7 bg-green-500 text-black text-3xl font-black rounded-3xl shadow-2xl">START SCAN</button>
+  </div>
+
+  <div id="cam" class="hidden">
+    <video id="video" autoplay playsinline muted></video>
+    <div class="line"></div>
+    <button id="snap" class="btn"></button>
+    <button onclick="location.reload()" class="fixed top-8 right-8 text-white text-5xl z-50 bg-black/70 w-16 h-16 rounded-full">X</button>
+  </div>
+
+  <div id="result" class="hidden center text-white">
+    <div class="result-box">
+      <div class="text-9xl mb-8" id="icon">Package</div>
+      <h2 class="text-5xl font-black mb-6" id="title">Scanning...</h2>
+      <div class="text-3xl mb-8 leading-relaxed" id="details"></div>
+      <div class="text-2xl mb-10 text-cyan-400" id="extra"></div>
+      <button onclick="speak(document.getElementById('title').textContent + '. ' + document.getElementById('details').textContent)" class="mb-6 px-10 py-5 bg-cyan-500 text-black rounded-2xl font-black">SPEAK AGAIN</button>
+      <button onclick="location.reload()" class="px-16 py-7 bg-green-500 text-black text-3xl font-black rounded-3xl">SCAN NEXT</button>
     </div>
+  </div>
 
-    <!-- CAMERA -->
-    <div id="cam" class="hidden">
-        <video id="video" autoplay playsinline muted></video>
-        <div class="line"></div>
-        <button id="snap" class="big-btn"></button>
-        <button onclick="location.reload()" class="fixed top-8 right-8 text-white text-4xl z-50">X</button>
-    </div>
+  <audio id="beep" src="https://assets.mixkit.co/sfx/preview/mixkit-arcade-game-jump-coin-216.mp3" preload="auto"></audio>
+  <audio id="shutter" src="https://assets.mixkit.co/sfx/preview/mixkit-camera-shutter-click-564.mp3" preload="auto"></audio>
 
-    <!-- PROCESSING -->
-    <div id="processing" class="hidden center flex-col bg-black text-white">
-        <i class="text-8xl mb-8">Brain</i>
-        <p class="text-3xl font-black">Reading expiry date...</p>
-    </div>
+  <!-- ZXing for Barcode + QR -->
+  <script src="https://unpkg.com/@zxing/library@0.20.0/dist/index.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.0/dist/tesseract.min.js"></script>
+  <script>
+    let stream, worker, reader;
 
-    <!-- RESULT -->
-    <div id="result" class="hidden center flex-col bg-black text-white p-8">
-        <div class="text-8xl mb-8" id="emoji">Package</div>
-        <h2 class="text-4xl font-black mb-4" id="name">Food Item</h2>
-        <p class="text-6xl font-black mb-8" id="days">7 DAYS LEFT</p>
-        <button onclick="location.reload()" class="px-12 py-6 bg-green-500 text-black text-2xl font-black rounded-2xl">
-            SCAN AGAIN
-        </button>
-    </div>
+    document.getElementById('open').onclick = async () => {
+      document.getElementById('start').classList.add('hidden');
+      document.getElementById('cam').classList.remove('hidden');
 
-    <audio id="shutter" src="https://assets.mixkit.co/sfx/preview/mixkit-camera-shutter-click-564.mp3" preload="auto"></audio>
+      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+      const video = document.getElementById('video');
+      video.srcObject = stream;
 
-    <script>
-        let stream = null;
-        let worker = null;
+      reader = new ZXing.BrowserMultiFormatReader();
+      reader.decodeFromVideoDevice(null, video, (result, err) => {
+        if (result) {
+          document.getElementById('beep').play();
+          handleCode(result.getText(), result.getFormatName());
+        }
+      });
+    };
 
-        // OPEN CAMERA — 100% WORKS
-        document.getElementById('open').onclick = async () => {
-            document.getElementById('start').classList.add('hidden');
-            document.getElementById('cam').classList.remove('hidden');
+    document.getElementById('snap').onclick = async () => {
+      document.getElementById('shutter').play();
+      document.body.classList.add('flash');
+      setTimeout(() => document.body.classList.remove('flash'), 200);
+      if ('vibrate' in navigator) navigator.vibrate(120);
 
-            try {
-                stream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: "environment" }
-                });
-                document.getElementById('video').srcObject = stream;
-            } catch(e) {
-                alert("Camera blocked. Go to Settings → Safari/Chrome → Camera → Allow");
-            }
-        };
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      canvas.getContext('2d').drawImage(video, 0, 0);
 
-        // CAPTURE — 100% WORKING BUTTON
-        document.getElementById('snap').onclick = async () => {
-            // Effects
-            document.getElementById('shutter').play();
-            document.body.classList.add('shutter');
-            setTimeout(() => document.body.classList.remove('shutter'), 200);
-            if ('vibrate' in navigator) navigator.vibrate(100);
+      stream.getTracks().forEach(t => t.stop());
+      reader?.reset();
+      document.getElementById('cam').classList.add('hidden');
 
-            // Capture photo
-            const video = document.getElementById('video');
-            const canvas = document.createElement('canvas');
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            canvas.getContext('2d').drawImage(video, 0, 0);
-            stream.getTracks().forEach(t => t.stop());
+      worker = worker || await Tesseract.createWorker('eng');
+      const { data: { text } } = await worker.recognize(canvas);
+      processOCR(text);
+    };
 
-            // Show processing
-            document.getElementById('cam').classList.add('hidden');
-            document.getElementById('processing').classList.remove('hidden');
+    function handleCode(code, format) {
+      stream.getTracks().forEach(t => t.stop());
+      reader.reset();
+      document.getElementById('cam').classList.add('hidden');
 
-            // OCR
-            worker = worker || await Tesseract.createWorker('eng');
-            const { data: { text } } = await worker.recognize(canvas);
+      let title = "", details = "", extra = "", icon = "QR Code";
 
-            // Find expiry date
-            const dateMatch = text.match(/\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}|\d{4}[\/\-\.]\d{2}[\/\-\.]\d{2}|(?:JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)[\s\-\/]*\d{1,2}[\s\,]*\d{2,4}/i);
-            let daysLeft = 10;
-            let name = "Food Item";
-            let emoji = "Package";
+      if (format.includes("QR")) {
+        if (code.includes("http")) {
+          title = "QR Link Found";
+          details = "Opening website...";
+          extra = code;
+          setTimeout(() => window.location.href = code, 2000);
+        } else if (/^[A-Za-z2-7]{8,90}$/.test(code)) {
+          title = "CRYPTO SEED!";
+          details = "NEVER SHARE THIS!";
+          extra = "12-24 word recovery phrase detected";
+          icon = "Lock";
+        } else {
+          title = "QR Code Scanned";
+          details = code.length > 100 ? code.substring(0,100)+"..." : code;
+        }
+      } else {
+        title = "Barcode Found";
+        details = code;
+        extra = format;
+      }
 
-            if (dateMatch) {
-                const parsed = new Date(dateMatch[0]);
-                if (!isNaN(parsed)) {
-                    daysLeft = Math.max(0, Math.ceil((parsed - new Date()) / 86400000));
-                }
-            }
+      showResult(title, details, extra, icon);
+      speak(title + ". " + details);
+    }
 
-            // Guess food name
-            const foods = { milk:"Milk", yogurt:"Yogurt", cheese:"Cheese", chicken:"Chicken", egg:"Eggs", bread:"Bread", banana:"Banana" };
-            const lower = text.toLowerCase();
-            for (let key in foods) {
-                if (lower.includes(key)) {
-                    name = foods[key];
-                    emoji = key === "milk" ? "Milk" : key === "yogurt" ? "Yogurt" : key === "chicken" ? "Chicken" : key === "egg" ? "Eggs" : key === "banana" ? "Banana" : "Cheese";
-                    break;
-                }
-            }
+    function processOCR(text) {
+      const upper = text.toUpperCase().replace(/O/g,'0').replace(/I/g,'1').replace(/S/g,'5');
 
-            // Show result
-            document.getElementById('processing').classList.add('hidden');
-            document.getElementById('result').classList.remove('hidden');
-            document.getElementById('name').textContent = name;
-            document.getElementById('emoji').textContent = emoji;
-            document.getElementById('days').textContent = daysLeft === 0 ? "EXPIRED TODAY" : 
-                                                          daysLeft === 1 ? "1 DAY LEFT" : 
-                                                          daysLeft <= 3 ? `${daysLeft} DAYS LEFT` : 
-                                                          `${daysLeft} DAYS LEFT`;
-            document.getElementById('days').style.color = daysLeft <= 2 ? "#ff4444" : "#00ff00";
+      // Find dates
+      const dateMatch = upper.match(/\b(\d{1,2}[\/\-\.\s]\d{1,2}[\/\-\.\s]\d{2,4}|\d{4}[\/\-\.\s]\d{2}[\/\-\.\s]\d{2}|(?:JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)[\s\-\.\/]*\d{1,2}|EXP.{0,30}\d+|BEST BEFORE.{0,30}\d+|USE BY.{0,30}\d+|\d{6,8})\b/gi) || [];
+      
+      let expiry = null;
+      for (let d of dateMatch) {
+        const parsed = new Date(d.replace(/EXP|BEST BEFORE|USE BY|BB.?/gi, '').trim());
+        if (!isNaN(parsed) && parsed > new Date('2015')) {
+          expiry = parsed;
+          break;
+        }
+      }
 
-            confetti({ particleCount: 300, spread: 100, origin: { y: 0.6 } });
-        };
-    </script>
+      let days = expiry ? Math.max(0, Math.ceil((expiry - Date.now()) / 86400000)) : null;
+
+      let title = "Item Detected", details = "", extra = "", icon = "Package";
+
+      if (upper.includes("PASSPORT") || upper.includes("IDENTITY")) { title="Passport/ID"; icon="Passport"; details="Personal document detected"; }
+      else if (upper.includes("MEDICINE") || upper.includes("TABLET") || upper.includes("SYRUP") || upper.includes("CAPSULE")) { title="Medicine"; icon="Pill"; details="Pharmaceutical product"; }
+      else if (upper.includes("MILK")) { title="Milk"; icon="Milk"; }
+      else if (upper.includes("YOGURT") || upper.includes("YOGHURT")) { title="Yogurt"; icon="Yogurt"; }
+      else if (upper.includes("EGG")) { title="Eggs"; icon="Egg"; }
+      else if (upper.includes("CHICKEN")) { title="Chicken"; icon="Chicken"; }
+
+      if (days !== null) {
+        details = days === 0 ? "EXPIRED TODAY!" :
+                  days === 1 ? "EXPIRES TOMORROW!" :
+                  days <= 3 ? `ONLY ${days} DAYS LEFT!` : `${days} days remaining`;
+        extra = `Expiry date: ${expiry.toLocaleDateString()}`;
+      } else {
+        details = "No expiry date found";
+      }
+
+      showResult(title, details, extra, icon);
+      speak(title + ". " + details + ". " + extra);
+    }
+
+    function showResult(title, details, extra, icon) {
+      document.getElementById('result').classList.remove('hidden');
+      document.getElementById('title').textContent = title;
+      document.getElementById('details').textContent = details;
+      document.getElementById('details').style.color = details.includes("EXPIRED") || details.includes("ONLY") ? "#ff0066" : "#00ff88";
+      document.getElementById('extra').textContent = extra;
+      document.getElementById('icon').textContent = icon;
+      confetti({particleCount:500, spread:180, origin:{y:0.6}});
+    }
+
+    function speak(text) {
+      if ('speechSynthesis' in window) {
+        const utter = new SpeechSynthesisUtterance(text);
+        utter.rate = 0.9;
+        utter.pitch = 1;
+        speechSynthesis.speak(utter);
+      }
+    }
+  </script>
 </body>
 </html>
