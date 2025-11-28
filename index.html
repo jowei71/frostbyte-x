@@ -1,202 +1,401 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>FrostByte X • Expiry Master</title>
-  <meta name="theme-color" content="#000000">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="mobile-web-app-capable" content="yes">
-  <link rel="manifest" href="data:application/manifest+json,{
-    \"name\":\"FrostByte X\",
-    \"short_name\":\"FrostByte\",
-    \"start_url\":\".\",
-    \"display\":\"standalone\",
-    \"background_color\":\"#000\",
-    \"theme_color\":\"#000\",
-    \"icons\":[{\"src\":\"https://frostbytex.app/icon-512.png\",\"sizes\":\"512x512\",\"type\":\"image/png\"}]
-  }">
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.0/dist/tesseract.min.js"></script>
-  <style>
-    body,html{margin:0;padding:0;height:100dvh;background:#000;color:#0f0;font-family:system-ui;overflow:hidden;}
-    #video{width:100vw;height:100dvh;object-fit:cover;background:#111;}
-    .beam{position:fixed;top:0;left:0;right:0;height:8px;background:#0f0;box-shadow:0 0 80px #0f0;animation:scan 3s infinite linear;z-index:20;}
-    @keyframes scan{0%{top:-10%}100%{top:110%}}
-    .safe{color:#0f0;text-shadow:0 0 20px #0f0;}
-    .warning{color:#ff9500;text-shadow:0 0 20px #ff9500;}
-    .danger{color:#ff3b30;text-shadow:0 0 20px #ff3b30;animation:pulse 1s infinite;}
-    @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.6}}
-    .big{font-size:4.5rem;font-weight:900;line-height:1;}
-    .btn{padding:16px 32px;border:4px solid #0f0;background:#000;font-weight:900;border-radius:50px;transition:all .3s;}
-    .btn:active{transform:scale(0.95);background:#0f0;color:#000;}
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>FrostByte AI • Smart Food Scanner</title>
+    <meta name="theme-color" content="#0f172a">
+    <meta name="description" content="AI-powered food scanner. Zero food waste. Real-time expiry tracking.">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.0/dist/tesseract.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: #f8fafc;
+            min-height: 100dvh;
+            overflow-x: hidden;
+            touch-action: manipulation;
+        }
+        .glass {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .scanner-line {
+            position: absolute;
+            width: 100%;
+            height: 4px;
+            background: #22d3ee;
+            box-shadow: 0 0 30px #22d3ee;
+            animation: scan 3s infinite linear;
+        }
+        @keyframes scan { 0% { top: 0; opacity: 0; } 40% { opacity: 1; } 100% { top: 100%; opacity: 0; } }
+        .btn-press { transition: all 0.2s; }
+        .btn-press:active { transform: scale(0.95); }
+        .fade-in { animation: fadeIn 0.6s ease-out forwards; opacity: 0; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .pulse-glow { animation: pulseGlow 2s infinite; }
+        @keyframes pulseGlow { 0%,100% { box-shadow: 0 0 10px rgba(34,211,238,0.5); } 50% { box-shadow: 0 0 30px rgba(34,211,238,0.9); } }
+        .loading-dots:after { content: ''; animation: dots 1.5s steps(5,end) infinite; }
+        @keyframes dots { 0%,20%{content:'.'} 40%{content:'..'} 60%{content:'...'} 80%,100%{content:''} }
+        .shutter { animation: shutter 0.15s ease; }
+        @keyframes shutter { 0%,100% { background: transparent; } 50% { background: white; } }
+        .capture-btn {
+            width: 76px; height: 76px; background: white; border: 5px solid #e2e8f0;
+            border-radius: 50%; position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); z-index: 10;
+        }
+        }
+        .capture-btn:active { transform: translateX(-50%) scale(0.88); }
+        .banner {
+            background: linear-gradient(90deg, #06b6d4, #3b82f6);
+            color: white;
+            text-align: center;
+            padding: 10px;
+            font-weight: 600;
+            animation: slideDown 0.6s ease-out 0.5s forwards;
+            transform: translateY(-100%);
+        }
+        @keyframes slideDown { to { transform: translateY(0); } }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+    </style>
 </head>
-<body>
+<body class="min-h-screen pb-8">
 
-  <!-- Splash / Start -->
-  <div id="splash" class="fixed inset-0 flex flex-col items-center justify-center text-center p-8 bg-black">
-    <h1 class="big mb-4 glitch">FROSTBYTE <span class="text-green-400">X</span></h1>
-    <p class="text-2xl mb-12">Never eat expired food again</p>
-    <button id="start" class="btn text-3xl">START SCANNER</button>
-  </div>
+    <div class="banner fixed top-0 left-0 right-0 z-50 shadow-2xl">
+        Real AI Active • Scanning actual expiry dates!
+    </div>
 
-  <!-- Camera View -->
-  <video id="video" autoplay muted playsinline class="hidden"></video>
-  <div class="beam hidden"></div>
+    <nav class="glass fixed top-12 lg:top-0 w-full z-40 px-4 py-3 flex justify-between items-center border-b border-white/10">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 bg-gradient-to-br from-cyan-400 to-blue-600 rounded-xl flex items-center justify-center">
+                <i class="fa-solid fa-snowflake text-white"></i>
+            </div>
+            <h1 class="text-xl font-bold">FrostByte<span class="text-cyan-400">.ai</span></h1>
+        </div>
+        <div class="text-xs bg-emerald-500/20 border border-emerald-500/40 px-3 py-1.5 rounded-full text-emerald-400 flex items-center gap-2">
+            <div class="w-2 h-2 bg-emerald-400 rounded-full pulse-glow"></div>
+            LIVE AI
+        </div>
+    </nav>
 
-  <!-- Live Status -->
-  <div id="status" class="hidden fixed bottom-32 left-0 right-0 text-center text-2xl font-black z-10">
-    Scanning for dates...
-  </div>
+    <main class="pt-28 px-4 max-w-4xl mx-auto">
 
-  <!-- Result Screen -->
-  <div id="result" class="hidden fixed inset-0 bg-black flex flex-col items-center justify-center p-8 text-center">
-    <h2 id="title" class="big mb-8"></h2>
-    <div id="days" class="text-6xl font-black mb-8"></div>
-    <div id="advice" class="text-4xl font-black mb-12 max-w-lg"></div>
-    <img id="photo" class="max-w-full rounded-3xl border-8 border-green-400 mb-12 shadow-2xl">
-    <button onclick="location.reload()" class="btn text-3xl">SCAN NEXT ITEM</button>
-  </div>
+        <!-- Stats -->
+        <div class="stats-grid mb-6 grid grid-cols-2 gap-4">
+            <div class="glass rounded-2xl p-5 fade-in">
+                <div class="text-xs text-slate-400 mb-1">Fridge Health</div>
+                <div class="text-4xl font-bold text-emerald-400" id="health-score">—</div>
+                <div class="w-full bg-slate-700/50 h-3 mt-3 rounded-full overflow-hidden">
+                    <div id="health-bar" class="h-full bg-gradient-to-r from-emerald-500 to-cyan-500 w-0 transition-all duration-1000"></div>
+                </div>
+            </div>
+            <div class="glass rounded-2xl p-5 fade-in">
+                <div class="text-xs text-slate-400 mb-1">Money Saved</div>
+                <div class="text-4xl font-bold text-amber-400">$<span id="money-saved">0</span></div>
+                <p class="text-xs text-slate-500 mt-1">From rescued food</p>
+            </div>
+        </div>
 
-  <script>
-    const video = document.getElementById('video');
+        <!-- Scanner Card -->
+        <div class="glass rounded-3xl p-1 mb-6 border border-white/10 shadow-2xl fade-in">
+            <div class="bg-slate-900/80 rounded-[1.5rem] overflow-hidden relative min-h-[420px] flex flex-col items-center justify-center">
 
-    document.getElementById('start').onclick = async () => {
-      document.getElementById('splash').classList.add('hidden');
-      video.classList.remove('hidden');
-      document.querySelector('.beam').classList.remove('hidden');
-      document.getElementById('status').classList.remove('hidden');
+                <!-- Init Screen -->
+                <div id="scanner-init" class="text-center p-8 w-full space-y-8">
+                    <div class="w-32 h-32 bg-slate-800/60 rounded-full mx-auto flex items-center justify-center border-4 border-dashed border-cyan-500/40 pulse-glow">
+                        <i class="fa-solid fa-camera text-6xl text-cyan-400"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-3xl font-black mb-2">Scan Anything</h3>
+                        <p class="text-slate-400 text-lg">Milk • Yogurt • Meat • Medicine • Anything</p>
+                    </div>
+                    <button id="camera-btn" class="w-full max-w-xs mx-auto py-5 bg-gradient-to-r from-cyan-600 to-blue-700 rounded-xl text-white font-bold text-xl btn-press shadow-2xl">
+                        Take Photo
+                    </button>
+                </div>
 
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment", width: {ideal:1920}, height: {ideal:1080} }
-      });
-      video.srcObject = stream;
-      video.play();
+                <!-- Camera View -->
+                <div id="camera-view" class="hidden absolute inset-0 bg-black rounded-[1.5rem] overflow-hidden">
+                    <video id="video" autoplay playsinline muted class="w-full h-full object-cover"></video>
+                    <div class="scanner-line"></div>
+                    <div class="absolute top-4 left-4 text-sm font-mono text-cyan-400 bg-black/60 px-4 py-2 rounded-full">
+                        LIVE
+                    </div>
+                    <button id="capture-btn" class="capture-btn"></button>
+                    <button id="close-camera" class="absolute top-4 right-4 text-white bg-black/60 w-12 h-12 rounded-full flex items-center justify-center text-3xl">
+                        ×
+                    </button>
+                </div>
 
-      setTimeout(scanLoop, 1500);
-    };
+                <!-- Scanning Overlay -->
+                <div id="scanning-overlay" class="hidden absolute inset-0 bg-black flex flex-col items-center justify-center p-8">
+                    <canvas id="preview-canvas" class="hidden"></canvas>
+                    <div class="scanner-line"></div>
+                    <div class="text-center space-y-6">
+                        <div class="w-24 h-24 bg-cyan-500/20 rounded-full flex items-center justify-center">
+                            <i class="fa-solid fa-brain text-6xl text-cyan-400 animate-pulse"></i>
+                        </div>
+                        <div class="glass border border-cyan-500/30 px-8 py-5 rounded-3xl">
+                            <p class="text-2xl font-bold text-cyan-400" id="scan-text">Reading expiry dates<span class="loading-dots"></span></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-    async function scanLoop() {
-      if (!video.videoWidth) return setTimeout(scanLoop, 500);
+        <!-- Results -->
+        <div id="results-section" class="hidden space-y-6 fade-in">
+            <button id="rescue-btn" class="w-full p-3 rounded-3xl bg-gradient-to-r from-orange-600 to-rose-700 shadow-2xl btn-press">
+                <div class="glass rounded-2xl p-6 flex items-center justify-between">
+                    <div class="flex items-center gap-5">
+                        <div class="text-4xl">Fire</div>
+                        <div class="text-left">
+                            <div class="text-orange-300 font-bold uppercase text-sm tracking-wider">Urgent Rescue</div>
+                            <div class="text-2xl font-black">Save Food Tonight</div>
+                        </div>
+                    </div>
+                    <i class="fa-solid fa-arrow-right text-3xl"></i>
+                </div>
+            </button>
 
-      const canvas = document.createElement('canvas');
-      canvas.width = 1000;
-      canvas.height = video.videoHeight * (1000 / video.videoWidth);
-      canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+            <div id="items-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-5"></div>
+        </div>
+    </main>
 
-      try {
-        const worker = await Tesseract.createWorker('eng', 1, { logger: () => {} });
-        const { data: { text } } = await worker.recognize(canvas);
-        await worker.terminate();
+    <!-- Rescue Recipe Modal -->
+    <div id="recipe-modal" class="fixed inset-0 z-50 hidden items-end justify-center bg-black/90 backdrop-blur-md">
+        <div class="w-full max-w-2xl bg-slate-900 rounded-t-3xl border-t border-white/10 max-h-[85vh] overflow-y-auto">
+            <div class="p-8">
+                <div class="w-12 h-1 bg-slate-600 rounded-full mx-auto mb-8"></div>
+                <div id="recipe-content" class="text-center space-y-8"></div>
+            </div>
+        </div>
+    </div>
 
-        const dates = findAllDates(text);
-        if (dates.length === 0) throw "no date";
+    <audio id="shutter-sound" src="https://assets.mixkit.co/sfx/preview/mixkit-camera-shutter-click-564.mp3" preload="auto"></audio>
 
-        const best = getBestExpiry(dates);
-        const img = canvas.toDataURL('image/jpeg', 0.9);
+    <script>
+        // State
+        let inventory = JSON.parse(localStorage.getItem('frostbyte-inventory') || '[]');
+        let savedMoney = parseFloat(localStorage.getItem('frostbyte-saved') || '0');
+        let cameraStream = null;
+        let worker = null;
 
-        showResult(best, img);
-        video.srcObject.getTracks().forEach(t => t.stop());
-      } catch (e) {
-        setTimeout(scanLoop, 800);
-      }
-    }
+        // DOM
+        const scannerInit = document.getElementById('scanner-init');
+        const cameraView = document.getElementById('camera-view');
+        const scanningOverlay = document.getElementById('scanning-overlay');
+        const video = document.getElementById('video');
+        const previewCanvas = document.getElementById('preview-canvas');
+        const itemsGrid = document.getElementById('items-grid');
+        const healthScore = document.getElementById('health-score');
+        const healthBar = document.getElementById('health-bar');
+        const moneySaved = document.getElementById('money-saved');
+        const scanText = document.getElementById('scan-text');
 
-    function findAllDates(text) {
-      const t = text.toUpperCase().replace(/O/g,'0').replace(/I/g,'1').replace(/S/g,'5');
-      const regexes = [
-        /\b(\d{1,2})[-\/\.]\s*(\d{1,2})[-\/\.]\s*(\d{2,4})\b/g,
-        /\b(\d{4})[-\/\.]\s*(\d{2})[-\/\.]\s*(\d{2})\b/g,
-        /\b(\d{1,2})\s*(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)[A-Z]*\s*(\d{2,4})\b/gi,
-        /\b(EXP|USE BY|BEST BEFORE|BB|BBE)[\s:]*\s*([A-Z0-9\/\-\.]{6,12})\b/gi,
-        /\b\d{6,8}\b/g
-      ];
-
-      const found = new Set();
-      regexes.forEach(r => {
-        let m;
-        while ((m = r.exec(t)) !== null) {
-          const raw = m[0].replace(/[^0-9A-Z]/g,'');
-          const d = parseAnyDate(raw);
-          if (d && d > new Date('2010')) found.add(d);
+        // Init worker once
+        async function initWorker() {
+            if (worker) return worker;
+            worker = await Tesseract.createWorker('eng', 1, {
+                logger: m => console.log(m)
+            });
+            return worker;
         }
-      });
-      return Array.from(found).sort((a,b)=>a-b);
-    }
 
-    function parseAnyDate(str) {
-      if (str.length === 6 || str.length === 8) {
-        const d = str.slice(0,2), m = str.slice(2,4), y = (str.length===6?"20":"") + str.slice(-2);
-        return new Date(y, m-1, d);
-      }
-      try { return new Date(str); } catch(e) { return null; }
-    }
+        // Camera
+        document.getElementById('camera-btn').onclick = async () => {
+            scannerInit.classList.add('hidden');
+            cameraView.classList.remove('hidden');
 
-    function getBestExpiry(dates) {
-      const now = Date.now();
-      let closestFuture = null;
-      let closestPast = null;
+            try {
+                cameraStream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } }
+                });
+                video.srcObject = cameraStream;
+                video.play();
+            } catch (err) {
+                alert("Camera access denied. Enable it in settings!");
+            }
+        };
 
-      dates.forEach(d => {
-        const diff = d - now;
-        if (diff > 0 && (!closestFuture || diff < closestFuture.diff)) {
-          closestFuture = {date:d, diff};
+        document.getElementById('close-camera').onclick = () => location.reload();
+
+        document.getElementById('capture-btn').onclick = async () => {
+            shutterSound.play();
+            document.body.classList.add('shutter');
+            setTimeout(() => document.body.classList.remove('shutter'), 150);
+            if ('vibrate' in navigator) navigator.vibrate(100);
+
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0);
+            previewCanvas.width = cameraView.clientWidth;
+            previewCanvas.height = cameraView.clientHeight;
+            previewCanvas.getContext('2d').drawImage(canvas, 0, 0, previewCanvas.width, previewCanvas.height);
+
+            // Stop camera
+            cameraStream.getTracks().forEach(t => t.stop());
+            cameraView.classList.add('hidden');
+            scanningOverlay.classList.remove('hidden');
+
+            // Real OCR
+            await initWorker();
+            const { data: { text } } = await worker.recognize(canvas);
+            const dates = extractDates(text);
+            const item = classifyItem(text, dates);
+
+            if (item) {
+                inventory.unshift(item);
+                localStorage.setItem('frostbyte-inventory', JSON.stringify(inventory));
+                renderResults();
+                confetti({ particleCount: 200, spread: 100, origin: { y: 0.6 } });
+            } else {
+                scanText.textContent = "No expiry found — added as fresh";
+                setTimeout(() => {
+                    inventory.unshift({ name: "Unknown Item", daysLeft: 14, emoji: "Question", tip: "Check manually" });
+                    renderResults();
+                }, 1500);
+            }
+            scanningOverlay.classList.add('hidden');
+        };
+
+        function extractDates(text) {
+            const patterns = [
+                /(\d{1,2})[\/\-\.\s](\d{1,2})[\/\-\.\s](\d{2,4})/g,
+                /(\d{4})[\/\-\.\s](\d{2})[\/\-\.\s](\d{2})/g,
+                /(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)[A-Z]*[\s\.\/\-](\d{1,2})[\s\,]*(\d{2,4})?/gi,
+                /\b(\d{2})(\d{2})(\d{2,4})\b/g
+            ];
+            const found = [];
+            const now = new Date();
+            patterns.forEach(p => {
+                let m;
+                while (m = p.exec(text)) {
+                    let date = null;
+                    if (m[0].match(/\d{6,8}/)) {
+                        const d = m[0].replace(/\D/g,'');
+                        date = new Date(+d.slice(-4), d.slice(2,4)-1, d.slice(0,2));
+                    } else {
+                        date = new Date(m[0]);
+                    }
+                    if (date && date > new Date('2015')) found.push(date);
+                }
+            });
+            return found.sort((a,b)=>a-b);
         }
-        if (diff < 0 && (!closestPast || diff > closestPast.diff)) {
-          closestPast = {date:d, diff};
+
+        function classifyItem(text, dates) {
+            text = text.toLowerCase();
+            const name = text.match(/(milk|yogurt|cheese|chicken|beef|eggs|bread|avocado|banana|tomato|spinach|pizza)/i)?.[0] || "Food Item";
+            const capitalized = name.charAt(0).toUpperCase() + name.slice(1);
+
+            if (dates.length === 0) return { name: capitalized, daysLeft: 10, emoji: "Package", tip: "No date found" };
+
+            const expiry = dates[0];
+            const daysLeft = Math.ceil((expiry - new Date()) / 86400000);
+
+            return {
+                name: capitalized,
+                daysLeft: Math.max(0, daysLeft),
+                emoji: "Package",
+                tip: daysLeft > 0 ? `Safe for ${daysLeft} days` : `Expired ${-daysLeft} days ago`,
+                rawDate: expiry.toLocaleDateString()
+            };
         }
-      });
 
-      return closestFuture || closestPast || {date:new Date(), diff:0};
-    }
+        function renderResults() {
+            resultsSection.classList.remove('hidden');
+            itemsGrid.innerHTML = '';
 
-    function showResult(expiry, img) {
-      const days = Math.round(expiry.diff / 86400000);
-      const absDays = Math.abs(days);
+            let totalScore = 0;
+            inventory.forEach((item, i) => {
+                const days = item.daysLeft;
+                totalScore += days > 10 ? 100 : days > 5 ? 80 : days > 2 ? 50 : days > 0 ? 20 : 5;
 
-      let title = "", daysText = "", advice = "", cls = "";
+                const urgency = days === 0 ? 'bg-rose-500/20 border-rose-500/40 text-rose-400' :
+                               days <= 2 ? 'bg-orange-500/20 border-orange-500/40 text-orange-400' :
+                               days <= 7 ? 'bg-amber-500/20 border-amber-500/40 text-amber-400' :
+                               'bg-emerald-500/20 border-emerald-500/40 text-emerald-400';
 
-      if (days > 30) {
-        title = "SAFE";
-        daysText = `${absDays}+ days left`;
-        advice = "You're good — enjoy!";
-        cls = "safe";
-      } else if (days > 7) {
-        title = "SAFE";
-        daysText = `${days} days left`;
-        advice = "Still fresh — no rush";
-        cls = "safe";
-      } else if (days > 0) {
-        title = "USE SOON";
-        daysText = `Only ${days} day${days>1?'s':''} left`;
-        advice = "Eat today or tomorrow!";
-        cls = "warning";
-      } else if (days > -7) {
-        title = "EXPIRED";
-        ";
-        daysText = `Expired ${absDays} day${absDays>1?'s':''} ago`;
-        advice = "Smell test it... maybe okay";
-        cls = "warning";
-      } else {
-        title = "THROW NOW        ";
-        daysText = `Expired ${absDays} days ago`;
-        advice = "Bin it. Not worth the risk.";
-        cls = "danger";
-      }
+                const card = document.createElement('div');
+                card.className = `glass rounded-2xl p-6 border ${urgency} fade-in`;
+                card.innerHTML = `
+                    <div class="flex justify-between items-start mb-4">
+                        <span class="text-6xl">${item.emoji}</span>
+                        <span class="text-lg font-bold px-4 py-2 rounded-full bg-current/20">${days} ${days===1?'DAY':'DAYS'}</span>
+                    </div>
+                    <h3 class="font-black text-2xl mt-4">${item.name}</h3>
+                    <p class="text-slate-400 mt-2">${item.tip}</p>
+                    <button class="eat-btn w-full mt-6 py-4 bg-white/10 hover:bg-white/20 rounded-xl font-bold btn-press" data-index="${i}">
+                        Mark As Eaten (+$3.50)
+                    </button>
+                `;
+                itemsGrid.appendChild(card);
+            });
 
-      document.getElementById('result').classList.remove('hidden');
-      document.getElementById('title').textContent = title;
-      document.getElementById('title').className = cls;
-      document.getElementById('days').textContent = daysText;
-      document.getElementById('days').className = cls;
-      document.getElementById('advice').textContent = advice;
-      document.getElementById('advice').className = cls;
-      document.getElementById('photo').src = img;
+            const score = inventory.length ? Math.round(totalScore / inventory.length) : 0;
+            healthScore.textContent = score;
+            healthBar.style.width = score + '%';
 
-      confetti({particleCount:500, spread:180, origin:{y:0.5}});
-    }
-  </script>
+            document.querySelectorAll('.eat-btn').forEach(btn => {
+                btn.onclick = () => {
+                    const idx = btn.dataset.index;
+                    savedMoney += 3.5;
+                    localStorage.setItem('frostbyte-saved', savedMoney);
+                    moneySaved.textContent = savedMoney.toFixed(1);
+                    inventory.splice(idx, 1);
+                    localStorage.setItem('frostbyte-inventory', JSON.stringify(inventory));
+                    renderResults();
+                    confetti({ particleCount: 80, spread: 70 });
+                    if ('vibrate' in navigator) navigator.vibrate([100,50,100]);
+                };
+            });
+
+            document.getElementById('rescue-btn').onclick = () => {
+                const urgent = inventory.filter(i => i.daysLeft <= 3);
+                if (urgent.length === 0) {
+                    recipeContent.innerHTML = `<h3 class="text-3xl font-bold text-emerald-400">Fridge is Healthy!</h3><p>No rescue needed today.</p>`;
+                } else {
+                    recipeContent.innerHTML = `
+                        <h3 class="text-4xl font-bold text-orange-400 mb-6">Quick Rescue Recipe</h3>
+                        <p class="text-2xl mb-8">Use: ${urgent.map(i=>i.name).join(', ')}</p>
+                        <div class="bg-white/10 rounded-3xl p-8 text-left space-y-4">
+                            <p class="text-lg">1. Throw everything in a pan</p>
+                            <p class="text-lg">2. Add oil, garlic, soy sauce</p>
+                            <p class="text-lg">3. Cook 10 mins</p>
+                            <p class="text-lg">4. Save the planet (and $10)</p>
+                        </div>
+                        <button onclick="recipeModal.classList.add('hidden')" class="mt-10 w-full py-5 bg-cyan-600 hover:bg-cyan-700 rounded-2xl font-bold text-xl btn-press">
+                            I'm a Hero!
+                        </button>
+                    `;
+                }
+                recipeModal.classList.remove('hidden');
+            };
+
+            resultsSection.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Initial render if data exists
+        if (inventory.length > 0) renderResults();
+
+        // Fade in animation
+        setTimeout(() => document.querySelectorAll('.fade-in').forEach((el, i) => {
+            el.style.animationDelay = `${i * 0.08}s`;
+            el.classList.add('opacity-100');
+        }), 200);
+    </script>
 </body>
 </html>
