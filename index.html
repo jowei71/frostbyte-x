@@ -3,62 +3,110 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>FrostByte X • Ultimate Scanner</title>
-  <meta name="theme-color" content="#000">
+  <title>FrostByte X • AI Scanner</title>
+  <meta name="theme-color" content="#00ff9d">
   <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.0/dist/tesseract.min.js"></script>
+  <script src="https://unpkg.com/@zxing/library@0.20.0/dist/index.min.js"></script>
+
   <style>
-    *{margin:0;padding:0;box-sizing:border-box}
-    body,html{height:100dvh;background:#000;color:#0f0;font-family:system-ui;overflow:hidden}
-    #video{width:100vw;height:100dvh;object-fit:cover}
-    .line{position:fixed;top:0;left:0;right:0;height:6px;background:#0f0;box-shadow:0 0 60px #0f0;animation:s 2.8s infinite linear;z-index:10}
-    @keyframes s{0%{top:-10%}100%{top:110%}}
-    .btn{position:fixed;bottom:40px;left:50%;transform:translateX(-50%);width:86px;height:86px;background:#fff;border-radius:50%;box-shadow:0 15px 50px #000;z-index:99}
-    .btn:active{transform:translateX(-50%) scale(0.88)}
-    .flash{animation:f 0.2s}@keyframes f{50%{background:#fff}}
-    .center{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100dvh;text-align:center;padding:20px}
-    h1{font-size:3.8rem;font-weight:900}
-    .result-box{background:rgba(0,255,0,0.1);border:2px solid #0f0;padding:30px;border-radius:30px;max-width:90%}
-    .big{font-size:5rem;line-height:1}
-    .hidden{display:none!important}
-    button{font-weight:900}
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Inter:wght@400;600;800&display=swap');
+    
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body,html { height:100dvh; background:linear-gradient(135deg,#0a001f,#001a33); color:#fff; font-family:'Inter',sans-serif; overflow:hidden; }
+    
+    .glass { background:rgba(255,255,255,0.08); backdrop-filter:blur(20px); border:1px solid rgba(0,255,157,0.3); box-shadow:0 8px 32px rgba(0,255,157,0.1); }
+    
+    .scanline { position:fixed; top:0; left:0; width:100%; height:6px; background:#00ff9d; box-shadow:0 0 60px #00ff9d; animation:scan 3s infinite linear; z-index:10; }
+    @keyframes scan { 0%{top:-10%} 100%{top:110%} }
+    
+    .btn-capture { width:90px; height:90px; background:#fff; border-radius:50%; box-shadow:0 15px 50px rgba(0,255,157,0.6); }
+    .btn-capture:active { transform:scale(0.88); }
+    
+    .flash { animation:flash 0.25s; }
+    @keyframes flash { 50% { background:#fff; } }
+    
+    .title { font-family:'Orbitron',sans-serif; font-size:3.5rem; background:linear-gradient(90deg,#00ff9d,#00d4ff); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+    
+    .card { background:rgba(0,255,157,0.1); border:2px solid #00ff9d; }
+    
+    .hidden { display:none!important; }
+    .center { display:grid; place-items:center; height:100dvh; }
   </style>
 </head>
-<body>
+<body class="text-white">
 
-  <div id="start" class="center text-white">
-    <h1>FROSTBYTE <span style="color:#0f0">X</span></h1>
-    <p class="text-2xl mb-10">Barcode • QR • Expiry • Medicine • ID • Crypto</p>
-    <button id="open" class="px-16 py-7 bg-green-500 text-black text-3xl font-black rounded-3xl shadow-2xl">START SCAN</button>
+  <!-- START -->
+  <div id="start" class="center px-8 text-center">
+    <h1 class="title mb-4">FROSTBYTE X</h1>
+    <p class="text-2xl mb-12 opacity-90">AI Scanner • Food • Medicine • QR • Barcode • ID</p>
+    <button id="begin" class="px-16 py-8 bg-gradient-to-r from-cyan-500 to-emerald-500 text-black text-3xl font-black rounded-3xl shadow-2xl hover:shadow-emerald-500/50 transition">
+      START SCANNING
+    </button>
   </div>
 
-  <div id="cam" class="hidden">
-    <video id="video" autoplay playsinline muted></video>
-    <div class="line"></div>
-    <button id="snap" class="btn"></button>
-    <button onclick="location.reload()" class="fixed top-8 right-8 text-white text-5xl z-50 bg-black/70 w-16 h-16 rounded-full">X</button>
+  <!-- CAMERA -->
+  <div id="cam" class="hidden relative">
+    <video id="video" autoplay playsinline muted class="w-full h-full object-cover"></video>
+    <div class="scanline"></div>
+    <div class="absolute inset-0 flex flex-col justify-between p-8 pointer-events-none">
+      <div class="text-center">
+        <p class="text-xl font-bold bg-black/60 px-6 py-3 rounded-full inline-block">Live AI Scanning...</p>
+      </div>
+      <button id="snap" class="btn-capture pointer-events-auto mx-auto"></button>
+    </div>
+    <button onclick="location.reload()" class="absolute top-8 right-8 w-14 h-14 bg-black/70 rounded-full text-3xl z-50">X</button>
   </div>
 
-  <div id="result" class="hidden center text-white">
-    <div class="result-box">
-      <div class="text-9xl mb-8" id="icon">Package</div>
-      <h2 class="text-5xl font-black mb-6" id="title">Scanning...</h2>
-      <div class="text-3xl mb-8 leading-relaxed" id="details"></div>
-      <div class="text-2xl mb-10 text-cyan-400" id="extra"></div>
-      <button onclick="speak(document.getElementById('title').textContent + '. ' + document.getElementById('details').textContent)" class="mb-6 px-10 py-5 bg-cyan-500 text-black rounded-2xl font-black">SPEAK AGAIN</button>
-      <button onclick="location.reload()" class="px-16 py-7 bg-green-500 text-black text-3xl font-black rounded-3xl">SCAN NEXT</button>
+  <!-- RESULT -->
+  <div id="result" class="hidden center px-8">
+    <div class="card rounded-3xl p-10 max-w-lg w-full text-center">
+      <div class="text-9xl mb-8" id="emoji">Package</div>
+      <h2 class="text-4xl font-black mb-6" id="name">Unknown Item</h2>
+      <p class="text-6xl font-black mb-4" id="days" style="color:#00ff9d"></p>
+      <p class="text-2xl mb-8 opacity-90" id="warning"></p>
+      <img id="photo" class="w-full rounded-2xl border-4 border-emerald-500 mb-8 shadow-2xl">
+      <div class="space-y-4">
+        <button onclick="speak()" class="w-full py-5 bg-cyan-600 hover:bg-cyan-500 rounded-2xl font-bold text-xl">
+          SPEAK RESULT
+        </button>
+        <button onclick="location.reload()" class="w-full py-6 bg-gradient-to-r from-emerald-500 to-cyan-500 text-black font-black text-2xl rounded-2xl">
+          SCAN AGAIN
+        </button>
+      </div>
     </div>
   </div>
 
   <audio id="beep" src="https://assets.mixkit.co/sfx/preview/mixkit-arcade-game-jump-coin-216.mp3" preload="auto"></audio>
   <audio id="shutter" src="https://assets.mixkit.co/sfx/preview/mixkit-camera-shutter-click-564.mp3" preload="auto"></audio>
 
-  <!-- ZXing for Barcode + QR -->
-  <script src="https://unpkg.com/@zxing/library@0.20.0/dist/index.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.0/dist/tesseract.min.js"></script>
   <script>
-    let stream, worker, reader;
+    let stream, worker, reader, lastPhoto = "";
 
-    document.getElementById('open').onclick = async () => {
+    // American, fast, confident voice
+    function speak() {
+      if ('speechSynthesis' in window) {
+        speechSynthesis.cancel();
+        const msg = new SpeechSynthesisUtterance(
+          document.getElementById('name').textContent + ". " +
+          document.getElementById('days').textContent + ". " +
+          document.getElementById('warning').textContent
+        );
+        msg.rate = 1.1;
+        msg.pitch = 1;
+        msg.lang = 'en-US';
+        const voices = speechSynthesis.getVoices();
+        const american = voices.find(v => v.lang === 'en-US' && v.name.includes('Google')) || voices[0];
+        if (american) msg.voice = american;
+        speechSynthesis.speak(msg);
+      }
+    }
+
+    document.getElementById('begin').onclick = async () => {
       document.getElementById('start').classList.add('hidden');
       document.getElementById('cam').classList.remove('hidden');
 
@@ -67,10 +115,10 @@
       video.srcObject = stream;
 
       reader = new ZXing.BrowserMultiFormatReader();
-      reader.decodeFromVideoDevice(null, video, (result, err) => {
+      reader.decodeFromVideoDevice(null, video, (result) => {
         if (result) {
           document.getElementById('beep').play();
-          handleCode(result.getText(), result.getFormatName());
+          handleCode(result.getText());
         }
       });
     };
@@ -78,13 +126,15 @@
     document.getElementById('snap').onclick = async () => {
       document.getElementById('shutter').play();
       document.body.classList.add('flash');
-      setTimeout(() => document.body.classList.remove('flash'), 200);
-      if ('vibrate' in navigator) navigator.vibrate(120);
+      setTimeout(() => document.body.classList.remove('flash'), 250);
+      if ('vibrate' in navigator) navigator.vibrate(100);
 
+      const video = document.getElementById('video');
       const canvas = document.createElement('canvas');
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
       canvas.getContext('2d').drawImage(video, 0, 0);
+      lastPhoto = canvas.toDataURL('image/jpeg', 0.9);
 
       stream.getTracks().forEach(t => t.stop());
       reader?.reset();
@@ -92,98 +142,81 @@
 
       worker = worker || await Tesseract.createWorker('eng');
       const { data: { text } } = await worker.recognize(canvas);
-      processOCR(text);
+      analyzeItem(text, lastPhoto);
     };
 
-    function handleCode(code, format) {
+    function handleCode(code) {
       stream.getTracks().forEach(t => t.stop());
       reader.reset();
       document.getElementById('cam').classList.add('hidden');
 
-      let title = "", details = "", extra = "", icon = "QR Code";
-
-      if (format.includes("QR")) {
-        if (code.includes("http")) {
-          title = "QR Link Found";
-          details = "Opening website...";
-          extra = code;
-          setTimeout(() => window.location.href = code, 2000);
-        } else if (/^[A-Za-z2-7]{8,90}$/.test(code)) {
-          title = "CRYPTO SEED!";
-          details = "NEVER SHARE THIS!";
-          extra = "12-24 word recovery phrase detected";
-          icon = "Lock";
-        } else {
-          title = "QR Code Scanned";
-          details = code.length > 100 ? code.substring(0,100)+"..." : code;
-        }
+      if (code.includes('http') || code.length > 50) {
+        showResult("QR Code", code.substring(0,80)+(code.length>80?'...':''), "Tap to open link", "QR Code", "");
+        setTimeout(() => window.open(code, '_blank'), 2000);
       } else {
-        title = "Barcode Found";
-        details = code;
-        extra = format;
+        fetch(`https://world.openfoodfacts.org/api/v0/product/${code}.json`)
+          .then(r => r.json())
+          .then(d => {
+            const name = d.product?.product_name || "Unknown Product";
+            showResult(name, "Barcode Scanned", `Code: ${code}`, "Barcode", lastPhoto || "");
+          })
+          .catch(() => showResult("Product", code, "Offline barcode", "Barcode", lastPhoto || ""));
       }
-
-      showResult(title, details, extra, icon);
-      speak(title + ". " + details);
     }
 
-    function processOCR(text) {
-      const upper = text.toUpperCase().replace(/O/g,'0').replace(/I/g,'1').replace(/S/g,'5');
+    function analyzeItem(text, photo) {
+      const t = text.toUpperCase().replace(/O/g,'0').replace(/I/g,'1');
 
-      // Find dates
-      const dateMatch = upper.match(/\b(\d{1,2}[\/\-\.\s]\d{1,2}[\/\-\.\s]\d{2,4}|\d{4}[\/\-\.\s]\d{2}[\/\-\.\s]\d{2}|(?:JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)[\s\-\.\/]*\d{1,2}|EXP.{0,30}\d+|BEST BEFORE.{0,30}\d+|USE BY.{0,30}\d+|\d{6,8})\b/gi) || [];
-      
-      let expiry = null;
-      for (let d of dateMatch) {
-        const parsed = new Date(d.replace(/EXP|BEST BEFORE|USE BY|BB.?/gi, '').trim());
-        if (!isNaN(parsed) && parsed > new Date('2015')) {
-          expiry = parsed;
-          break;
-        }
-      }
+      // Find expiry
+      const dates = (t.match(/\d{1,2}[\/\-\.\s]\d{1,2}[\/\-\.\s]\d{2,4}|\d{4}[\/\-\.\s]\d{2}[\/\-\.\s]\d{2}|(?:JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)[\s\-\.\/]*\d{1,2}|\d{6,8}|EXP[^\d]{0,20}\d+|BEST BEFORE[^\d]{0,20}\d+/gi) || [])
+        .map(d => new Date(d.replace(/EXP|BEST BEFORE|USE BY|BB.?/gi,'').trim()))
+        .filter(d => !isNaN(d) && d > new Date('2015'));
 
-      let days = expiry ? Math.max(0, Math.ceil((expiry - Date.now()) / 86400000)) : null;
+      const expiry = dates.sort((a,b)=>a-b)[0];
+      const days = expiry ? Math.max(0, Math.ceil((expiry - Date.now()) / 86400000)) : null;
 
-      let title = "Item Detected", details = "", extra = "", icon = "Package";
+      // Detect type
+      let name = "Item", emoji = "Package", warning = "";
+      if (t.includes("PASSPORT") || t.includes("IDENTITY")) { name="Passport/ID Card"; emoji="Passport"; warning="Personal document detected"; }
+      else if (t.includes("MEDICINE") || t.includes("TABLET") || t.includes("SYRUP")) { name="Medicine"; emoji="Pill"; warning="Check dosage carefully"; }
+      else if (t.includes("MILK")) { name="Milk"; emoji="Milk"; }
+      else if (t.includes("YOGURT")) { name="Yogurt"; emoji="Yogurt"; }
+      else if (t.includes("EGG")) { name="Eggs"; emoji="Egg"; }
+      else if (t.includes("CHICKEN")) { name="Chicken"; emoji="Chicken"; }
 
-      if (upper.includes("PASSPORT") || upper.includes("IDENTITY")) { title="Passport/ID"; icon="Passport"; details="Personal document detected"; }
-      else if (upper.includes("MEDICINE") || upper.includes("TABLET") || upper.includes("SYRUP") || upper.includes("CAPSULE")) { title="Medicine"; icon="Pill"; details="Pharmaceutical product"; }
-      else if (upper.includes("MILK")) { title="Milk"; icon="Milk"; }
-      else if (upper.includes("YOGURT") || upper.includes("YOGHURT")) { title="Yogurt"; icon="Yogurt"; }
-      else if (upper.includes("EGG")) { title="Eggs"; icon="Egg"; }
-      else if (upper.includes("CHICKEN")) { title="Chicken"; icon="Chicken"; }
-
-      if (days !== null) {
-        details = days === 0 ? "EXPIRED TODAY!" :
-                  days === 1 ? "EXPIRES TOMORROW!" :
-                  days <= 3 ? `ONLY ${days} DAYS LEFT!` : `${days} days remaining`;
-        extra = `Expiry date: ${expiry.toLocaleDateString()}`;
+      // Final message
+      let daysText = "", warningText = "";
+      if (days === null) {
+        daysText = "No expiry found";
+        warningText = "Check manually or scan barcode";
+      } else if (days === 0) {
+        daysText = "EXPIRED TODAY";
+        warningText = "Throw away immediately";
+      } else if (days <= 2) {
+        daysText = `${days} DAY${days>1?'S':''} LEFT`;
+        warningText = "USE RIGHT NOW!";
       } else {
-        details = "No expiry date found";
+        daysText = `${days} days left`;
+        warningText = "Still safe to consume";
       }
 
-      showResult(title, details, extra, icon);
-      speak(title + ". " + details + ". " + extra);
+      showResult(name, daysText, warningText, emoji, photo);
+      speak();
     }
 
-    function showResult(title, details, extra, icon) {
+    function showResult(name, days, warning, emoji, photo) {
       document.getElementById('result').classList.remove('hidden');
-      document.getElementById('title').textContent = title;
-      document.getElementById('details').textContent = details;
-      document.getElementById('details').style.color = details.includes("EXPIRED") || details.includes("ONLY") ? "#ff0066" : "#00ff88";
-      document.getElementById('extra').textContent = extra;
-      document.getElementById('icon').textContent = icon;
-      confetti({particleCount:500, spread:180, origin:{y:0.6}});
+      document.getElementById('name').textContent = name;
+      document.getElementById('days').textContent = days;
+      document.getElementById('days').style.color = days.includes("EXPIRED") || days.includes("NOW") ? "#ff0066" : "#00ff9d";
+      document.getElementById('warning').textContent = warning;
+      document.getElementById('emoji').textContent = emoji;
+      if (photo) document.getElementById('photo').src = photo;
+      confetti({ particleCount: 600, spread: 120, origin: { y: 0.6 } });
     }
 
-    function speak(text) {
-      if ('speechSynthesis' in window) {
-        const utter = new SpeechSynthesisUtterance(text);
-        utter.rate = 0.9;
-        utter.pitch = 1;
-        speechSynthesis.speak(utter);
-      }
-    }
+    // Load voices when ready
+    speechSynthesis.onvoiceschanged = () => {};
   </script>
 </body>
 </html>
